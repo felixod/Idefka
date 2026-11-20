@@ -137,8 +137,7 @@ export const exportOrgDocDocx = (kind: 'polozhenie' | 'di', scopeId: string) =>
         ВЕРСИЯ: '0.1 (из модели)',
         ДАТА: date,
         ОБЩИЕ: `Отдел — структурное подразделение компании. Подчинение: ${dep.parentId ? org.departments.find((d) => d.id === dep.parentId)?.name ?? '—' : 'директору ИТ-компании'}. Тип: ${dep.kind}.`,
-        ЦЕЛИ: dep.goals?.map((g, i) => `${i + 1}. ${g}`).join('
-') || '(заполнить)',
+        ЦЕЛИ: dep.goals?.map((g, i) => `${i + 1}. ${g}`).join('; ') || '(заполнить)',
         ШТАТ_ИТОГО: `Итого штатных единиц: ${depRoles.reduce((s, r) => s + r.role.fte, 0)}.`,
         ЭКОНОМИКА: `ФОТ отдела: ${Math.round(depRoles.reduce((s, r) => s + r.fotYear, 0)).toLocaleString('ru-RU')} ₽/год (с взносами).`,
         ПРАВА: 'Запрашивать информацию у смежных отделов и предприятий; приостанавливать изменения вне CAB; эскалировать владельцу процесса.',
