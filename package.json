@@ -20,6 +20,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "docx": "^8.5.0"
+    "docx": "^8.5.0",
+    "buffer": "^6.0.3"
   }
 }
