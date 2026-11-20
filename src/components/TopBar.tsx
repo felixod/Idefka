@@ -241,7 +241,8 @@ export function TopBar() {
     <header className="topbar">
       <div className="tb-left">
         <button className={'tb-btn menu-btn' + (menu ? ' on' : '')} onClick={() => setMenu(!menu)} aria-haspopup="menu">
-          <img className="brand-mark" src="./logo-mark.svg" alt="" />
+          <img className="brand-mark brand-light" src="./logo-mark.svg" alt="ИТ-Элемент [29]" />
+          <img className="brand-mark brand-dark" src="./logo-mark-white.svg" alt="ИТ-Элемент [29]" />
           <span>Файл</span>
         </button>
         <div className="doc-name" title={filePath ?? 'Файл ещё не сохранён'}>
