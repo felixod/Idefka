@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 22
       - name: Установка зависимостей
-        run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+        run: npm install --no-audit --no-fund
       - name: Проверка типов
         run: npm run typecheck
         continue-on-error: true
