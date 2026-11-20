@@ -177,7 +177,7 @@ export interface OrgRole {
 /** kind: service — обслуживание (в цену договора), development — развитие (проекты), internal — обеспечение */
 export type OrgDepKind = 'service' | 'development' | 'internal';
 
-export export interface OrgDepartment {
+export interface OrgDepartment {
   id: string;
   name: string;
   mission: string;

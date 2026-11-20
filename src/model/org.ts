@@ -1,4 +1,5 @@
 import type { Model, OrgData, OrgDepartment, OrgRole } from './types';
+export type { OrgDepartment };
 import { boxNumber, diagramOrder } from './query';
 
 export const DEFAULT_ORG_PARAMS = {
