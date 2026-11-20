@@ -4,6 +4,7 @@ import { getState, toast } from '../store';
 import { computeGeometry } from '../model/geometry';
 import { diagramOrder, nodeOf } from '../model/query';
 import { abcCsv } from '../model/abc';
+import { orgCsv, orgDocsMd, orgOf } from '../model/org';
 import { SHEET_H, SHEET_W } from '../model/sheet';
 import { SheetContent } from '../components/sheet/Sheet';
 import { exportFile, printHtml } from '../platform';
@@ -78,6 +79,22 @@ export const exportAbcCsv = () =>
   attempt(async () => {
     const saved = await exportFile(`${fileBaseName()} — ABC`, abcCsv(getState().model), 'csv', 'Таблица CSV (Excel)', 'text/csv');
     if (saved) toast('Отчёт ABC сохранён');
+  });
+
+export const exportOrgCsv = () =>
+  attempt(async () => {
+    const org = orgOf(getState().model);
+    if (!org) throw new Error('в модели нет раздела org (оргструктура)');
+    const saved = await exportFile(`${fileBaseName()} — Смета ФОТ`, orgCsv(org, getState().model), 'csv', 'Таблица CSV (Excel)', 'text/csv');
+    if (saved) toast('Смета ФОТ сохранена');
+  });
+
+export const exportOrgDocs = () =>
+  attempt(async () => {
+    const org = orgOf(getState().model);
+    if (!org) throw new Error('в модели нет раздела org (оргструктура)');
+    const saved = await exportFile(`${fileBaseName()} — Положения и ДИ`, orgDocsMd(org, getState().model), 'md', 'Markdown-документ', 'text/markdown');
+    if (saved) toast('Положения и должностные инструкции сохранены');
   });
 
 const escapeHtml = (value: string) => value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`);
