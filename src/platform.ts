@@ -39,6 +39,13 @@ export function forgetFile() {
 
 const cancelledByUser = (error: unknown) => (error as { name?: string })?.name === 'AbortError';
 
+// встроенные контексты (вебвью/киоски) дают File System Access API, но блокируют операции:
+const platformBlocked = (error: unknown) => {
+  if (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) return true;
+  const message = (error as Error)?.message ?? '';
+  return message.includes('не разрешил запись') || message.includes('not allowed by the user agent');
+};
+
 const safeFileName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, ' ').trim();
 
 function download(name: string, data: string | Uint8Array, mime: string) {
@@ -98,10 +105,16 @@ async function unlessCancelled<T>(action: () => Promise<T>): Promise<T | null> {
 
 export async function openFileDialog(): Promise<OpenedFile | null> {
   if (!hasFileAccess) return pickWithInput();
-  return unlessCancelled(async () => {
-    const [handle] = await browser.showOpenFilePicker!({ types: MODEL_TYPES, multiple: false });
-    return readHandle(handle);
-  });
+  try {
+    return await unlessCancelled(async () => {
+      const [handle] = await browser.showOpenFilePicker!({ types: MODEL_TYPES, multiple: false });
+      return readHandle(handle);
+    });
+  } catch (error) {
+    if (cancelledByUser(error)) return null;
+    if (platformBlocked(error)) return pickWithInput();
+    throw error;
+  }
 }
 
 export async function saveModelFile(content: string, saveAs: boolean, suggestedName: string): Promise<string | null> {
@@ -110,13 +123,22 @@ export async function saveModelFile(content: string, saveAs: boolean, suggestedN
     download(name, content, 'application/json');
     return name;
   }
-  return unlessCancelled(async () => {
-    if (!currentHandle || saveAs) currentHandle = await browser.showSaveFilePicker!({ suggestedName: name, types: MODEL_TYPES });
-    if (!(await ensureWritable(currentHandle))) throw new Error('браузер не разрешил запись в файл. Сохраните через «Сохранить как…»');
-    await writeTo(currentHandle, content);
-    rememberRecent(currentHandle).catch(() => undefined);
-    return currentHandle.name;
-  });
+  try {
+    return await unlessCancelled(async () => {
+      if (!currentHandle || saveAs) currentHandle = await browser.showSaveFilePicker!({ suggestedName: name, types: MODEL_TYPES });
+      if (!(await ensureWritable(currentHandle))) throw new Error('браузер не разрешил запись в файл. Сохраните через «Сохранить как…»');
+      await writeTo(currentHandle, content);
+      rememberRecent(currentHandle).catch(() => undefined);
+      return currentHandle.name;
+    });
+  } catch (error) {
+    if (cancelledByUser(error)) return null;
+    if (platformBlocked(error)) {
+      download(name, content, 'application/json');
+      return name;
+    }
+    throw error;
+  }
 }
 
 export async function exportFile(suggestedName: string, data: string | Uint8Array, extension: string, label: string, mime: string) {
