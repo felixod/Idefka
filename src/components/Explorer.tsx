@@ -95,8 +95,7 @@ function ArrowList({ model, diagram, sel }: { model: Model; diagram: Diagram; se
           <div key={group.role} className="arrow-group">
             {group.title && (
               <div className="group-title">
-                <i className={'role-dot r-' + group.role} />
-                {group.title}
+                <span className={'role-chip r-' + group.role}>{group.title}</span>
               </div>
             )}
             {group.arrows.map((a) => (

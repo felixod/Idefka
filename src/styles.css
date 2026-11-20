@@ -415,12 +415,6 @@ kbd {
   font-size: 12px;
   color: var(--muted);
 }
-.role-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--role);
-}
 .r-I {
   --role: var(--icom-i);
 }
