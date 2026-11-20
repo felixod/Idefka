@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { select, useStore, type Selection } from '../store';
+import { select, setState, useStore, type Selection } from '../store';
 import type { Arrow, Box, Diagram, Model, NodeKind } from '../model/types';
 import { arrowRole, boxNumber, labelOf, rootOf, ROLE_NAME } from '../model/query';
 import { openDiagram } from '../actions';
@@ -131,6 +131,13 @@ export function Explorer() {
         </button>
         <button className={tab === 'arrows' ? 'on' : ''} onClick={() => setTab('arrows')}>
           Стрелки <span className="count">{diagram.arrows.length}</span>
+        </button>
+        <button
+          className="tab-collapse"
+          title="Свернуть панель"
+          onClick={() => setState({ explorerOpen: false })}
+        >
+          <Icon.chevron />
         </button>
       </div>
       <div className="panel-scroll">

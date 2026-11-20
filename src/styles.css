@@ -305,6 +305,31 @@ kbd {
   min-height: 0;
   background: var(--panel);
 }
+.workspace.explorer-closed {
+  grid-template-columns: 36px 1fr 300px;
+}
+.explorer-rail {
+  display: grid;
+  place-items: center;
+  border: none;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.explorer-rail:hover {
+  color: var(--accent);
+  background: var(--panel-2);
+}
+.tabs .tab-collapse {
+  margin-left: auto;
+  width: 24px;
+  color: var(--muted);
+}
+.tabs .tab-collapse svg {
+  transform: rotate(180deg);
+}
 .explorer {
   border-right: 1px solid var(--line);
 }
