@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useStore, commit } from '../../store';
 import type { ReactElement } from 'react';
 import {
-  contractPrice, coverageGaps, createDepartment, DEFAULT_TEMPLATES, depFots, depTree, formatRub,
-  orgIssues, orgOf, orgSummary, roleFots, upsertRole, workIndex, DEP_KIND_TITLE,
+  coverageGaps, createDepartment, depFots, depTree, formatRub, orgIssues, orgOf, orgSummary,
+  roleFots, upsertRole, workIndex, DEP_KIND_TITLE,
   type DepNode, type RoleSuggestion,
 } from '../../model/org';
-import { exportOrgCsv, exportOrgDocDocx, exportOrgDocs } from '../../actions';
+import { exportOrgCsv, exportOrgDocs } from '../../actions';
 import { Icon } from '../icons';
 
-type Tab = 'struct' | 'proc' | 'docs';
+type Tab = 'struct' | 'proc';
 
 function editOrg(change: (org: NonNullable<ReturnType<typeof orgOf>>) => void, coalesceKey?: string) {
   commit((draft) => {
@@ -33,10 +33,10 @@ const numField = (label: string, value: number, set: (v: number) => void, key: s
   </label>
 );
 
-export function OrgDialog({ close }: { close: () => void }) {
+export function OrgDialog({ close, initialTab }: { close: () => void; initialTab?: Tab }) {
   const { model } = useStore();
   const org = orgOf(model);
-  const [tab, setTab] = useState<Tab>('struct');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'struct');
 
   if (!org) {
     return (
@@ -60,7 +60,6 @@ export function OrgDialog({ close }: { close: () => void }) {
   const roles = roleFots(org);
   const works = workIndex(model);
   const tree = depTree(org);
-  const contract = contractPrice(org);
   const issues = orgIssues(org, model);
   const gaps = coverageGaps(org, model);
 
@@ -80,18 +79,14 @@ export function OrgDialog({ close }: { close: () => void }) {
   const tabsRow = (
     <div className="tabs" style={{ marginBottom: 12 }}>
       <button className={tab === 'struct' ? 'on' : ''} onClick={() => setTab('struct')}>
-        Структура и деньги
+        Структура и подразделения
       </button>
       <button className={tab === 'proc' ? 'on' : ''} onClick={() => setTab('proc')}>
         Процессы → должности {gaps.length > 0 && <span className="count">{gaps.length}</span>}
       </button>
-      <button className={tab === 'docs' ? 'on' : ''} onClick={() => setTab('docs')}>
-        Документы (шаблонатор)
-      </button>
     </div>
   );
 
-  // ---------------------------------------------------------------- Структура
   const structSection = (
     <>
       <div className="two-cols" style={{ gap: 10, marginBottom: 12 }}>
@@ -106,24 +101,6 @@ export function OrgDialog({ close }: { close: () => void }) {
           Иерархия подразделений и цели
         </div>
         {dumpTree(tree, 0)}
-      </section>
-
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label" style={{ marginBottom: 6 }}>
-          Цена договора на обслуживание
-        </div>
-        <div className="two-cols" style={{ gap: 10, marginBottom: 8 }}>
-          {numField('Накладные, %', Math.round(org.params.overheadRate * 1000) / 10, (v) => editOrg((o) => (o.params.overheadRate = v / 100), 'org-oh'), 'oh', 0.5)}
-          {numField('Маржа, %', Math.round(org.params.marginRate * 1000) / 10, (v) => editOrg((o) => (o.params.marginRate = v / 100), 'org-mg'), 'mg', 0.5)}
-          {numField('Объектов', org.params.sites, (v) => editOrg((o) => (o.params.sites = v), 'org-sites'), 'sites')}
-        </div>
-        <p className="modal-text">
-          ФОТ обслуживания <b>{formatRub(contract.serviceFotYear)}</b> + накладные{' '}
-          <b>{formatRub(contract.overhead)}</b> = себестоимость <b>{formatRub(contract.cost)}</b>; маржа{' '}
-          <b>{formatRub(contract.margin)}</b> → <b>цена договора {formatRub(contract.priceYear)}/год</b> (
-          {formatRub(contract.priceMonth)}/мес · {formatRub(contract.pricePerSiteMonth)}/объект/мес ·{' '}
-          {formatRub(contract.pricePerUserMonth)}/пользователь/мес · {formatRub(contract.pricePerTicket)}/обращение)
-        </p>
       </section>
 
       {issues.length > 0 && (
@@ -225,7 +202,6 @@ export function OrgDialog({ close }: { close: () => void }) {
     </>
   );
 
-  // ---------------------------------------------------------------- Процессы → должности
   const procSection = (
     <>
       <p className="modal-text">
@@ -241,54 +217,12 @@ export function OrgDialog({ close }: { close: () => void }) {
     </>
   );
 
-  // ---------------------------------------------------------------- Документы
-  const docsSection = org.templates ? (
-    <>
-      <p className="modal-text">
-        Шаблоны хранятся в файле модели. Теги: {'{{КОМПАНИЯ}} {{ОТДЕЛ}} {{ДОЛЖНОСТЬ}} {{ГРЕЙД}} '}
-        {'{{РУКОВОДИТЕЛЬ}} {{ОКЛАД}} {{ДАТА}} {{ОБЩИЕ}} {{ЦЕЛИ}} {{ЭКОНОМИКА}} {{ЗНАНИЯ}} {{ПРАВА}} '}
-        {'{{ШТАТ_ИТОГО}}'}; встроенные таблицы: {'{{ТАБЛИЦА:ШТАТ}} {{ТАБЛИЦА:ФУНКЦИИ}} '}
-        {'{{ТАБЛИЦА:KPI}} {{ТАБЛИЦА:ПРОЦЕССЫ}}'}. Строки «# / ##» — заголовки.
-      </p>
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label">Шаблон «Положение об отделе»</div>
-        <textarea
-          rows={12}
-          style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
-          value={org.templates.polozhenie}
-          onChange={(e) => editOrg((o) => { if (o.templates) o.templates.polozhenie = e.target.value; }, 'tpl-pos')}
-        />
-      </section>
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label">Шаблон «Должностная инструкция»</div>
-        <textarea
-          rows={12}
-          style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
-          value={org.templates.di}
-          onChange={(e) => editOrg((o) => { if (o.templates) o.templates.di = e.target.value; }, 'tpl-di')}
-        />
-      </section>
-      <DocExport org={org} />
-    </>
-  ) : (
-    <section style={{ marginBottom: 12 }}>
-      <p className="modal-text">Шаблоны документов ещё не созданы для этой модели.</p>
-      <button
-        className="btn primary"
-        onClick={() => editOrg((o) => { o.templates = { ...DEFAULT_TEMPLATES }; })}
-      >
-        Создать шаблоны по умолчанию
-      </button>
-    </section>
-  );
-
   return (
     <div className="abc-dialog">
-      <h2>Орг-конструктор: процессы → должности → документы</h2>
+      <h2>Орг-конструктор</h2>
       {tabsRow}
       {tab === 'struct' && structSection}
       {tab === 'proc' && procSection}
-      {tab === 'docs' && docsSection}
 
       <div className="modal-actions">
         <button className="btn" onClick={exportOrgCsv}>
@@ -345,46 +279,5 @@ function GapRow({ gap, org }: { gap: RoleSuggestion; org: NonNullable<ReturnType
         {depMissing ? 'Создать подразделение и должность' : 'Создать должность'}
       </button>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------- экспорт DOCX
-function DocExport({ org }: { org: NonNullable<ReturnType<typeof orgOf>> }) {
-  const [depId, setDepId] = useState(org.departments[0]?.id ?? '');
-  const [roleId, setRoleId] = useState('');
-  const roles = roleFots(org);
-
-  return (
-    <section style={{ marginBottom: 12 }}>
-      <div className="field-label" style={{ marginBottom: 6 }}>
-        Выгрузка в Word (DOCX) — по шаблонам выше
-      </div>
-      <div className="center-row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select value={depId} onChange={(e) => setDepId(e.target.value)} style={{ maxWidth: 260 }}>
-          {org.departments.map((d) => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
-        <button className="btn" onClick={() => exportOrgDocDocx('polozhenie', depId)} disabled={!depId}>
-          DOCX: Положение
-        </button>
-      </div>
-      <div className="center-row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
-        <select value={roleId} onChange={(e) => setRoleId(e.target.value)} style={{ maxWidth: 320 }}>
-          <option value="">— выберите должность —</option>
-          {roles.map((r) => (
-            <option key={r.role.id} value={r.role.id}>
-              {r.role.name} ({r.dep.name})
-            </option>
-          ))}
-        </select>
-        <button className="btn" onClick={() => exportOrgDocDocx('di', roleId)} disabled={!roleId}>
-          DOCX: Должностная инструкция
-        </button>
-      </div>
-      <p className="field-hint">
-        Документ собирается в браузере по шаблону и данным модели (штат, функции с [A-узлами], KPI, вклад ₽ по Ф4).
-      </p>
-    </section>
   );
 }

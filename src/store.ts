@@ -16,11 +16,14 @@ export interface Editing {
   id: string;
 }
 
+export type OrgTab = 'struct' | 'proc';
+
 export type DialogState =
   | { kind: 'decompose'; boxId: string }
   | { kind: 'new' }
   | { kind: 'abc' }
-  | { kind: 'org' }
+  | { kind: 'org'; tab: OrgTab }
+  | { kind: 'settings' }
   | { kind: 'unsaved'; resolve: (answer: 'save' | 'discard' | 'cancel') => void }
   | { kind: 'about' }
   | { kind: 'shortcuts' };
