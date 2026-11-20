@@ -205,7 +205,12 @@ function FileMenu({ idef0, recent, installable, close }: FileMenuProps) {
           {item('Печать или PDF: эта диаграмма', '', () => printModel(true))}
           {item('Печать или PDF: вся модель', 'Ctrl+P', () => printModel(false))}
         </Separated>
-        {idef0 && <Separated>{item('Стоимостной анализ (ABC)', '', () => setState({ dialog: { kind: 'abc' } }))}</Separated>}
+        {idef0 && (
+          <Separated>
+            {item('Стоимостной анализ (ABC)', '', () => setState({ dialog: { kind: 'abc' } }))}
+            {item('Оргструктура и стоимость…', '', () => setState({ dialog: { kind: 'org' } }))}
+          </Separated>
+        )}
         <Separated>
           {item('Горячие клавиши', 'F1', () => setState({ dialog: { kind: 'shortcuts' } }))}
           {item('О программе', '', () => setState({ dialog: { kind: 'about' } }))}

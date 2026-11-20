@@ -4,6 +4,7 @@ import { fileName } from '../TopBar';
 import { AbcDialog } from './AbcDialog';
 import { DecomposeDialog } from './DecomposeDialog';
 import { NewModelDialog } from './NewModelDialog';
+import { OrgDialog } from './OrgDialog';
 
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 
@@ -109,6 +110,8 @@ function DialogBody({ dialog, close, modelName }: { dialog: DialogState; close: 
       return <NewModelDialog close={close} />;
     case 'abc':
       return <AbcDialog close={close} />;
+    case 'org':
+      return <OrgDialog close={close} />;
     case 'unsaved':
       return <UnsavedChanges dialog={dialog} modelName={modelName} />;
     case 'shortcuts':
@@ -129,7 +132,7 @@ export function Dialogs() {
 
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className={'modal' + (dialog.kind === 'abc' ? ' wide' : '')} role="dialog" aria-modal>
+      <div className={'modal' + (dialog.kind === 'abc' || dialog.kind === 'org' ? ' wide' : '')} role="dialog" aria-modal>
         <DialogBody dialog={dialog} close={close} modelName={fileName(filePath) ?? model.meta.name} />
       </div>
     </div>

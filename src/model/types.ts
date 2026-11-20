@@ -162,11 +162,44 @@ export interface AbcSettings {
   show: boolean;
 }
 
+export interface OrgRole {
+  id: string;
+  name: string;
+  grade: string;
+  salaryMin: number;
+  salaryMax: number;
+  fte: number;
+  works: string[]; // id работ модели, к которым приписана роль
+  note: string;
+}
+
+export interface OrgDepartment {
+  id: string;
+  name: string;
+  mission: string;
+  roles: OrgRole[];
+}
+
+export interface OrgParams {
+  months: number;
+  socialRate: number; // доля социальных взносов, например 0.302
+  ticketsPerMonth: number;
+  usersPerSite: number;
+  ticketsPerUserPerMonth: number;
+  sites: number;
+}
+
+export interface OrgData {
+  departments: OrgDepartment[];
+  params: OrgParams;
+}
+
 export interface Model {
   format: typeof FORMAT;
   version: number;
   meta: ModelMeta;
   abc: AbcSettings;
+  org?: OrgData;
   roots: Record<Notation, string>;
   diagrams: Record<string, Diagram>;
 }

@@ -20,6 +20,7 @@ export type DialogState =
   | { kind: 'decompose'; boxId: string }
   | { kind: 'new' }
   | { kind: 'abc' }
+  | { kind: 'org' }
   | { kind: 'unsaved'; resolve: (answer: 'save' | 'discard' | 'cancel') => void }
   | { kind: 'about' }
   | { kind: 'shortcuts' };
