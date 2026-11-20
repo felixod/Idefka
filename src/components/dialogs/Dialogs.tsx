@@ -112,7 +112,9 @@ function DialogBody({ dialog, close, modelName }: { dialog: DialogState; close: 
     case 'abc':
       return <AbcDialog close={close} />;
     case 'org':
-      return <OrgDialog close={close} />;
+      return <OrgDialog close={close} initialTab={dialog.tab} />;
+    case 'settings':
+      return <SettingsDialog close={close} />;
     case 'unsaved':
       return <UnsavedChanges dialog={dialog} modelName={modelName} />;
     case 'shortcuts':
