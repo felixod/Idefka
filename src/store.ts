@@ -41,12 +41,13 @@ export interface State {
   showGrid: boolean;
   showFrame: boolean;
   explorerOpen: boolean;
+  inspectorOpen: boolean;
   dialog: DialogState | null;
   toast: { text: string; id: number } | null;
   zoom: number;
 }
 
-type Prefs = Partial<Pick<State, 'theme' | 'showGrid' | 'showFrame' | 'explorerOpen'>>;
+type Prefs = Partial<Pick<State, 'theme' | 'showGrid' | 'showFrame' | 'explorerOpen' | 'inspectorOpen'>>;
 
 const PREFS_KEY = 'cloneapp:prefs';
 const HISTORY_LIMIT = 300;
@@ -74,6 +75,7 @@ let state: State = {
   theme: prefs.theme ?? 'system',
   showGrid: prefs.showGrid ?? true,
   explorerOpen: prefs.explorerOpen ?? true,
+  inspectorOpen: prefs.inspectorOpen ?? true,
   showFrame: prefs.showFrame ?? true,
   dialog: null,
   toast: null,
@@ -86,7 +88,7 @@ export const getState = () => state;
 
 export function setState(patch: Partial<State>) {
   state = { ...state, ...patch };
-  if ('theme' in patch || 'showGrid' in patch || 'showFrame' in patch || 'explorerOpen' in patch) savePrefs();
+  if ('theme' in patch || 'showGrid' in patch || 'showFrame' in patch || 'explorerOpen' in patch || 'inspectorOpen' in patch) savePrefs();
   listeners.forEach((listener) => listener());
 }
 
@@ -227,6 +229,7 @@ function loadPrefs(): Prefs {
       showGrid: typeof saved.showGrid === 'boolean' ? saved.showGrid : undefined,
       showFrame: typeof saved.showFrame === 'boolean' ? saved.showFrame : undefined,
       explorerOpen: typeof saved.explorerOpen === 'boolean' ? saved.explorerOpen : undefined,
+      inspectorOpen: typeof saved.inspectorOpen === 'boolean' ? saved.inspectorOpen : undefined,
     };
   } catch {
     return {};
@@ -234,9 +237,9 @@ function loadPrefs(): Prefs {
 }
 
 function savePrefs() {
-  const { theme, showGrid, showFrame, explorerOpen } = state;
+  const { theme, showGrid, showFrame, explorerOpen, inspectorOpen } = state;
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ theme, showGrid, showFrame, explorerOpen }));
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ theme, showGrid, showFrame, explorerOpen, inspectorOpen }));
   } catch {
     return;
   }

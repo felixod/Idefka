@@ -1,5 +1,5 @@
 import type { Diagram } from '../../model/types';
-import { useStore, type Selection } from '../../store';
+import { setState, useStore, type Selection } from '../../store';
 import { deleteSelection } from '../../actions';
 import { Icon } from '../icons';
 import { ArrowPanel } from './ArrowPanel';
@@ -47,8 +47,21 @@ function PanelBody() {
 }
 
 export function Inspector() {
+  const { inspectorOpen } = useStore();
   return (
-    <aside className="panel inspector" onKeyDown={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()}>
+    <aside
+      className={'panel inspector' + (inspectorOpen ? '' : ' closed')}
+      onKeyDown={(e) => e.key === 'Escape' && (e.target as HTMLElement).blur()}
+    >
+      <div className="insp-top">
+        <button
+          className="panel-collapse flip"
+          title="Свернуть панель свойств"
+          onClick={() => setState({ inspectorOpen: false })}
+        >
+          <Icon.chevron />
+        </button>
+      </div>
       <div className="panel-scroll insp">
         <PanelBody />
       </div>
