@@ -56,6 +56,7 @@ function warnBeforeLeaving(event: BeforeUnloadEvent) {
 export function App() {
   const state = useStore();
   const explorerOpen = state.explorerOpen;
+  const inspectorOpen = state.inspectorOpen;
 
   useEffect(() => {
     const scheme = darkScheme();
@@ -82,7 +83,7 @@ export function App() {
   return (
     <div className="app">
       <TopBar />
-      <div className={'workspace' + (explorerOpen ? '' : ' explorer-closed')}>
+      <div className={'workspace' + (explorerOpen ? '' : ' explorer-closed') + (inspectorOpen ? '' : ' inspector-closed')}>
         <Explorer />
         {!explorerOpen && (
           <button
@@ -95,6 +96,15 @@ export function App() {
         )}
         <Canvas />
         <Inspector />
+        {!inspectorOpen && (
+          <button
+            className="inspector-rail"
+            title="Показать панель свойств"
+            onClick={() => setState({ inspectorOpen: true })}
+          >
+            <Icon.chevron />
+          </button>
+        )}
       </div>
       <StatusBar />
       <Dialogs />

@@ -322,6 +322,42 @@ kbd {
   color: var(--accent);
   background: var(--panel-2);
 }
+.inspector-rail {
+  display: grid;
+  place-items: center;
+  border: none;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.inspector-rail svg {
+  transform: rotate(180deg);
+}
+.inspector-rail:hover {
+  color: var(--accent);
+  background: var(--panel-2);
+}
+.inspector.closed {
+  display: none;
+}
+.insp-top {
+  display: flex;
+  justify-content: flex-end;
+}
+.insp-top .panel-collapse {
+  width: 26px;
+}
+.panel-collapse.flip svg {
+  transform: none;
+}
+.workspace.inspector-closed {
+  grid-template-columns: 252px 1fr 36px;
+}
+.workspace.explorer-closed.inspector-closed {
+  grid-template-columns: 36px 1fr 36px;
+}
 .explorer.closed {
   display: none;
 }
