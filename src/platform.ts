@@ -127,9 +127,19 @@ export async function exportFile(suggestedName: string, data: string | Uint8Arra
   }
   return unlessCancelled(async () => {
     const types = [{ description: label, accept: { [mime]: [`.${extension}`] } }];
-    const handle = await browser.showSaveFilePicker!({ suggestedName: name, types });
-    await writeTo(handle, data);
-    return handle.name;
+    try {
+      const handle = await browser.showSaveFilePicker!({ suggestedName: name, types });
+      await writeTo(handle, data);
+      return handle.name;
+    } catch (error) {
+      // встроенные контексты (вебвью, киоски) дают showSaveFilePicker, но блокируют запись —
+      // в этом случае сохраняем обычной загрузкой
+      if (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) {
+        download(name, data, mime);
+        return name;
+      }
+      throw error;
+    }
   });
 }
 
