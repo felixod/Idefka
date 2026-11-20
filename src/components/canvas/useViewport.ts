@@ -70,7 +70,7 @@ export function useViewport(wrapRef: { current: HTMLDivElement | null }, diagram
         setView({ ...current, x: current.x - dy });
         return;
       }
-      setView({ x: current.x - dx, y: current.y - dy });
+      setView({ ...current, x: current.x - dx, y: current.y - dy });
     };
     element.addEventListener('wheel', onWheel, { passive: false });
     return () => element.removeEventListener('wheel', onWheel);
