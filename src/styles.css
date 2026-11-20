@@ -1413,6 +1413,15 @@ kbd {
 .brand-mark {
   height: 18px;
   width: auto;
+  display: none;
+}
+.brand-mark.brand-light {
+  display: block;
+}
+[data-theme='dark'] .brand-mark.brand-light {
+  display: none;
+}
+[data-theme='dark'] .brand-mark.brand-dark {
   display: block;
 }
 .brand-full {
