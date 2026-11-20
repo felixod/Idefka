@@ -322,13 +322,33 @@ kbd {
   color: var(--accent);
   background: var(--panel-2);
 }
-.tabs .tab-collapse {
-  margin-left: auto;
-  width: 24px;
-  color: var(--muted);
+.explorer.closed {
+  display: none;
 }
-.tabs .tab-collapse svg {
+.panel-top {
+  display: flex;
+  align-items: center;
+}
+.panel-top .tabs {
+  flex: 1;
+}
+.panel-collapse {
+  width: 26px;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.panel-collapse svg {
   transform: rotate(180deg);
+}
+.panel-collapse:hover {
+  color: var(--accent);
+  background: var(--panel-2);
 }
 .explorer {
   border-right: 1px solid var(--line);
