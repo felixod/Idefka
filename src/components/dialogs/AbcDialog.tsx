@@ -1,6 +1,7 @@
 import type { Model } from '../../model/types';
 import { commit, useStore } from '../../store';
 import { abcRows, formatMoney, type AbcRow } from '../../model/abc';
+import { contractPrice, formatRub, orgOf, workFot } from '../../model/org';
 import { uid } from '../../model/ops';
 import { exportAbcCsv } from '../../actions';
 import { Icon } from '../icons';
@@ -122,12 +123,80 @@ function Report({ model }: { model: Model }) {
 
 export function AbcDialog({ close }: { close: () => void }) {
   const { model } = useStore();
+  const org = orgOf(model);
+  const contract = org ? contractPrice(org) : null;
+
+  // Ф4: оплату персонала из раздела org -> в стоимость работ по центру «Персонал»
+  const syncSalaries = () =>
+    commit((draft) => {
+      if (!draft.org) return;
+      let center = draft.abc.centers.find((c) => c.name === 'Персонал');
+      if (!center) {
+        const id = uid('c');
+        draft.abc.centers.push({ id, name: 'Персонал', note: 'ФОТ из org (Ф4)' });
+        center = draft.abc.centers[draft.abc.centers.length - 1];
+      }
+      const costs = workFot(draft);
+      for (const d of Object.values(draft.diagrams)) {
+        for (const b of d.boxes) {
+          if (b.costs) delete b.costs[center.id];
+        }
+      }
+      for (const [wid, value] of costs) {
+        for (const d of Object.values(draft.diagrams)) {
+          const b = d.boxes.find((x) => x.id === wid);
+          if (b) {
+            b.costs = b.costs ?? {};
+            b.costs[center.id] = Math.round(value * 100) / 100;
+          }
+        }
+      }
+      draft.abc.show = true;
+    }, 'org-sync');
+
   return (
     <div className="abc-dialog">
-      <h2>Стоимостной анализ (ABC)</h2>
+      <h2>Стоимостной анализ (ABC) и деньги</h2>
       <p className="modal-text">
         Задайте центры затрат и стоимость недекомпозированных работ. Стоимость родительской работы считается сама: сумма дочерних работ × их частота.
       </p>
+      {org && contract && (
+        <section style={{ marginBottom: 12 }}>
+          <div className="field-label" style={{ marginBottom: 6 }}>
+            Персонал и договор (из раздела org)
+          </div>
+          <div className="two-cols" style={{ gap: 10, marginBottom: 8 }}>
+            <label className="field">
+              <span className="field-label">Накладные, %</span>
+              <input type="number" step={0.5} value={Math.round(org.params.overheadRate * 1000) / 10}
+                onChange={(e) => commit((draft) => { if (draft.org) draft.org.params.overheadRate = Number(e.target.value) / 100; }, 'abc-oh')} />
+            </label>
+            <label className="field">
+              <span className="field-label">Маржа, %</span>
+              <input type="number" step={0.5} value={Math.round(org.params.marginRate * 1000) / 10}
+                onChange={(e) => commit((draft) => { if (draft.org) draft.org.params.marginRate = Number(e.target.value) / 100; }, 'abc-mg')} />
+            </label>
+            <label className="field">
+              <span className="field-label">Объектов</span>
+              <input type="number" value={org.params.sites}
+                onChange={(e) => commit((draft) => { if (draft.org) draft.org.params.sites = Number(e.target.value); }, 'abc-sites')} />
+            </label>
+          </div>
+          <p className="modal-text">
+            Себестоимость <b>{formatRub(contract.cost)}</b> + маржа <b>{formatRub(contract.margin)}</b> →{' '}
+            <b>цена договора {formatRub(contract.priceYear)}/год</b> ({formatRub(contract.priceMonth)}/мес ·{' '}
+            {formatRub(contract.pricePerSiteMonth)}/объект/мес · {formatRub(contract.pricePerUserMonth)}/пользователь/мес ·{' '}
+            {formatRub(contract.pricePerTicket)}/обращение)
+          </p>
+          <button className="btn" onClick={syncSalaries}>
+            <Icon.money />
+            Синхронизировать: ФОТ персонала → в работы (центр «Персонал»)
+          </button>
+          <p className="field-hint">
+            Записывает оплату персонала из org (формула Ф4) в стоимость работ; при изменении оргструктуры нажмите снова. Остальные центры затрат не затрагиваются.
+          </p>
+        </section>
+      )}
       <div className="abc-grid">
         <CostCenters abc={model.abc} />
         <Report model={model} />

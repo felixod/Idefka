@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useStore, commit } from '../../store';
 import type { ReactElement } from 'react';
 import {
-  contractPrice, depFots, depTree, formatRub, orgIssues, orgOf, orgSummary,
-  roleFots, workIndex, DEP_KIND_TITLE, type DepNode,
+  coverageGaps, createDepartment, depFots, depTree, formatRub, orgIssues, orgOf, orgSummary,
+  roleFots, upsertRole, workIndex, DEP_KIND_TITLE, type DepNode, type RoleSuggestion,
 } from '../../model/org';
 import { exportOrgCsv, exportOrgDocs } from '../../actions';
 import { Icon } from '../icons';
+
+type Tab = 'struct' | 'proc';
 
 function editOrg(change: (org: NonNullable<ReturnType<typeof orgOf>>) => void, coalesceKey?: string) {
   commit((draft) => {
@@ -29,14 +32,15 @@ const numField = (label: string, value: number, set: (v: number) => void, key: s
   </label>
 );
 
-export function OrgDialog({ close }: { close: () => void }) {
+export function OrgDialog({ close, initialTab }: { close: () => void; initialTab?: Tab }) {
   const { model } = useStore();
   const org = orgOf(model);
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'struct');
 
   if (!org) {
     return (
       <div className="abc-dialog">
-        <h2>Оргструктура и стоимость</h2>
+        <h2>Орг-конструктор</h2>
         <p className="modal-text">
           В этой модели нет раздела <code>org</code>: отделы, роли, оклады и привязка к работам IDEF0.
           Он хранится прямо в файле .idef и добавляется генератором или вручную (JSON-поле «org»).
@@ -55,8 +59,8 @@ export function OrgDialog({ close }: { close: () => void }) {
   const roles = roleFots(org);
   const works = workIndex(model);
   const tree = depTree(org);
-  const contract = contractPrice(org);
   const issues = orgIssues(org, model);
+  const gaps = coverageGaps(org, model);
 
   const dumpTree = (nodes: DepNode[], depth: number): ReactElement[] =>
     nodes.flatMap((node) => [
@@ -71,13 +75,19 @@ export function OrgDialog({ close }: { close: () => void }) {
       ...dumpTree(node.children, depth + 1),
     ]);
 
-  return (
-    <div className="abc-dialog">
-      <h2>Оргструктура и стоимость</h2>
-      <p className="modal-text">
-        Штат и ФОТ считаются из раздела org модели: оклад роли × FTE × {org.params.months} мес × (1 + взносы).
-      </p>
+  const tabsRow = (
+    <div className="tabs" style={{ marginBottom: 12 }}>
+      <button className={tab === 'struct' ? 'on' : ''} onClick={() => setTab('struct')}>
+        Структура и подразделения
+      </button>
+      <button className={tab === 'proc' ? 'on' : ''} onClick={() => setTab('proc')}>
+        Процессы → должности {gaps.length > 0 && <span className="count">{gaps.length}</span>}
+      </button>
+    </div>
+  );
 
+  const structSection = (
+    <>
       <div className="two-cols" style={{ gap: 10, marginBottom: 12 }}>
         {numField('Месяцев в году', org.params.months, (v) => editOrg((o) => (o.params.months = v), 'org-months'), 'months')}
         {numField('Взносы, %', Math.round(org.params.socialRate * 1000) / 10, (v) => editOrg((o) => (o.params.socialRate = v / 100), 'org-social'), 'social', 0.1)}
@@ -90,24 +100,6 @@ export function OrgDialog({ close }: { close: () => void }) {
           Иерархия подразделений и цели
         </div>
         {dumpTree(tree, 0)}
-      </section>
-
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label" style={{ marginBottom: 6 }}>
-          Цена договора на обслуживание
-        </div>
-        <div className="two-cols" style={{ gap: 10, marginBottom: 8 }}>
-          {numField('Накладные, %', Math.round(org.params.overheadRate * 1000) / 10, (v) => editOrg((o) => (o.params.overheadRate = v / 100), 'org-oh'), 'oh', 0.5)}
-          {numField('Маржа, %', Math.round(org.params.marginRate * 1000) / 10, (v) => editOrg((o) => (o.params.marginRate = v / 100), 'org-mg'), 'mg', 0.5)}
-          {numField('Объектов', org.params.sites, (v) => editOrg((o) => (o.params.sites = v), 'org-sites'), 'sites')}
-        </div>
-        <p className="modal-text">
-          ФОТ обслуживания <b>{formatRub(contract.serviceFotYear)}</b> + накладные{' '}
-          <b>{formatRub(contract.overhead)}</b> = себестоимость <b>{formatRub(contract.cost)}</b>; маржа{' '}
-          <b>{formatRub(contract.margin)}</b> → <b>цена договора {formatRub(contract.priceYear)}/год</b> (
-          {formatRub(contract.priceMonth)}/мес · {formatRub(contract.pricePerSiteMonth)}/объект/мес ·{' '}
-          {formatRub(contract.pricePerUserMonth)}/пользователь/мес · {formatRub(contract.pricePerTicket)}/обращение)
-        </p>
       </section>
 
       {issues.length > 0 && (
@@ -205,15 +197,36 @@ export function OrgDialog({ close }: { close: () => void }) {
             </tbody>
           </table>
         </div>
-        <p className="field-hint">
-          Состав ролей и оклады хранятся в файле модели (поле org) — удобно менять генератором, файл остаётся совместимым с исходной Idefka.
-        </p>
       </section>
+    </>
+  );
+
+  const procSection = (
+    <>
+      <p className="modal-text">
+        Дерево работ IDEF0 без ответственной роли. Для каждой — предложение: подразделение (по области
+        процесса), название должности. Созданная должность сразу попадает в org и во все документы.
+      </p>
+      {gaps.length === 0 && (
+        <p className="modal-text">✓ Все работы модели покрыты ролями — предложений нет.</p>
+      )}
+      {gaps.map((gap) => (
+        <GapRow key={gap.wid} gap={gap} org={org} />
+      ))}
+    </>
+  );
+
+  return (
+    <div className="abc-dialog">
+      <h2>Орг-конструктор</h2>
+      {tabsRow}
+      {tab === 'struct' && structSection}
+      {tab === 'proc' && procSection}
 
       <div className="modal-actions">
         <button className="btn" onClick={exportOrgCsv}>
           <Icon.money />
-          Смета ФОТ (CSV для Excel)
+          Смета ФОТ (CSV)
         </button>
         <button className="btn" onClick={exportOrgDocs}>
           <Icon.table />
@@ -223,6 +236,47 @@ export function OrgDialog({ close }: { close: () => void }) {
           Готово
         </button>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- строка предложения
+function GapRow({ gap, org }: { gap: RoleSuggestion; org: NonNullable<ReturnType<typeof orgOf>> }) {
+  const [depId, setDepId] = useState(gap.suggestedDepId);
+  const [name, setName] = useState(gap.suggestedRoleName);
+  const depMissing = !org.departments.some((d) => d.id === depId);
+
+  const create = () => {
+    commit((draft) => {
+      if (!draft.org) return;
+      if (!draft.org.departments.some((d) => d.id === depId)) {
+        createDepartment(draft.org, `Подразделение ${depId} [${gap.workNum}]`, 'internal');
+      }
+      upsertRole(draft.org, depId, { name, works: [gap.wid] });
+    });
+  };
+
+  return (
+    <div className="center-row" style={{ alignItems: 'center', gap: 8, padding: '6px 0', flexWrap: 'wrap' }}>
+      <b style={{ minWidth: 52 }}>{gap.workNum}</b>
+      <span style={{ flex: '1 1 260px' }} className="muted">{gap.workName.split('\n')[0]}</span>
+      <select value={depId} onChange={(e) => setDepId(e.target.value)} style={{ maxWidth: 220 }}>
+        {!org.departments.some((d) => d.id === depId) && (
+          <option value={depId}>{depId} (создать)</option>
+        )}
+        {org.departments.map((d) => (
+          <option key={d.id} value={d.id}>{d.name}</option>
+        ))}
+      </select>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        style={{ width: 220 }}
+        title="Название должности"
+      />
+      <button className="btn primary" onClick={create} disabled={!name.trim()}>
+        {depMissing ? 'Создать подразделение и должность' : 'Создать должность'}
+      </button>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { redo, setState, undo, useStore, type ThemePref } from '../store';
+import { getState, redo, setState, undo, useStore, type ThemePref } from '../store';
 import { diagramOrder, diagramPath, diagramTitle, nodeOf } from '../model/query';
 import { NOTATIONS, NOTATION_TABS } from '../model/notation';
 import type { Model, Notation } from '../model/types';
-import { exportPng, exportSvg, newFile, openDiagram, openFile, openRecentFile, printModel, save, switchNotation } from '../actions';
+import { exportOrgCsv, exportOrgDocs, exportPng, exportSvg, newFile, openDiagram, openFile, openRecentFile, printModel, save, switchNotation } from '../actions';
 import { canvasApi } from './canvas/Canvas';
 import { Icon, KindIcon } from './icons';
 import { recentList } from '../platform';
@@ -207,8 +207,7 @@ function FileMenu({ idef0, recent, installable, close }: FileMenuProps) {
         </Separated>
         {idef0 && (
           <Separated>
-            {item('Стоимостной анализ (ABC)', '', () => setState({ dialog: { kind: 'abc' } }))}
-            {item('Оргструктура и стоимость…', '', () => setState({ dialog: { kind: 'org' } }))}
+            {item('Стоимостной анализ (ABC) и деньги', '', () => setState({ dialog: { kind: 'abc' } }))}
           </Separated>
         )}
         <Separated>
@@ -229,10 +228,70 @@ function FileMenu({ idef0, recent, installable, close }: FileMenuProps) {
   );
 }
 
+function OrgMenu({ idef0, close }: { idef0: boolean; close: () => void }) {
+  const run = (action: () => void) => () => {
+    close();
+    action();
+  };
+  const item = (label: string, action: () => void) => (
+    <button className="menu-item" onClick={run(action)}>
+      <span>{label}</span>
+    </button>
+  );
+  return (
+    <>
+      <div className="menu-backdrop" onPointerDown={close} />
+      <div className="menu" role="menu">
+        {idef0 && item('Орг-конструктор: процессы → должности…', () => setState({ dialog: { kind: 'org', tab: 'proc' } }))}
+        {idef0 && item('Структура и подразделения…', () => setState({ dialog: { kind: 'org', tab: 'struct' } }))}
+        <Separated>
+          {item('Смета ФОТ (CSV для Excel)', exportOrgCsv)}
+          {item('Положения и ДИ (Markdown)', exportOrgDocs)}
+        </Separated>
+        {idef0 && item('DOCX: Положения и ДИ…', () => setState({ dialog: { kind: 'org', tab: 'docs' } }))}
+      </div>
+    </>
+  );
+}
+
+function SettingsMenu({ close }: { close: () => void }) {
+  const { theme, showGrid, showFrame } = getState();
+  const run = (action: () => void) => () => {
+    close();
+    action();
+  };
+  const item = (label: string, action: () => void, on = false) => (
+    <button className="menu-item" onClick={run(action)}>
+      <span>{on ? '● ' : '○ '}{label}</span>
+    </button>
+  );
+  return (
+    <>
+      <div className="menu-backdrop" onPointerDown={close} />
+      <div className="menu" role="menu">
+        {item('Шаблоны документов…', () => setState({ dialog: { kind: 'org', tab: 'docs' } }))}
+        <Separated>
+          <div className="menu-label">Тема</div>
+          {(['system', 'light', 'dark'] as const).map((t) =>
+            item(
+              t === 'system' ? 'Как в системе' : t === 'light' ? 'Светлая' : 'Тёмная',
+              () => setState({ theme: t }),
+              theme === t,
+            ))}
+        </Separated>
+        <Separated>
+          {item('Сетка листа', () => setState({ showGrid: !showGrid }), showGrid)}
+          {item('Рамка листа', () => setState({ showFrame: !showFrame }), showFrame)}
+        </Separated>
+      </div>
+    </>
+  );
+}
+
 export function TopBar() {
   const { model, diagramId, filePath, dirty, past, future, zoom, showGrid, showFrame, theme } = useStore();
-  const [menu, setMenu] = useState(false);
-  const recent = useRecentFiles(menu);
+  const [menu, setMenu] = useState<null | 'file' | 'org' | 'settings'>(null);
+  const recent = useRecentFiles(menu === 'file');
   const installable = useInstallable();
   const name = fileName(filePath) ?? model.meta.name ?? 'Без имени';
   const ThemeIcon = THEME_ICON[theme];
@@ -240,9 +299,15 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="tb-left">
-        <button className={'tb-btn menu-btn' + (menu ? ' on' : '')} onClick={() => setMenu(!menu)} aria-haspopup="menu">
+        <button className={'tb-btn menu-btn' + (menu === 'file' ? ' on' : '')} onClick={() => setMenu(menu === 'file' ? null : 'file')} aria-haspopup="menu">
           <img className="brand-mark" src="./logo-mark.svg" alt="" />
           <span>Файл</span>
+        </button>
+        <button className={'tb-btn menu-btn' + (menu === 'org' ? ' on' : '')} onClick={() => setMenu(menu === 'org' ? null : 'org')} aria-haspopup="menu">
+          <span>Организация</span>
+        </button>
+        <button className={'tb-btn menu-btn' + (menu === 'settings' ? ' on' : '')} onClick={() => setMenu(menu === 'settings' ? null : 'settings')} aria-haspopup="menu">
+          <span>Настройки</span>
         </button>
         <div className="doc-name" title={filePath ?? 'Файл ещё не сохранён'}>
           <span className="doc-title">{name}</span>
@@ -285,8 +350,14 @@ export function TopBar() {
         </div>
       </div>
 
-      {menu && (
-        <FileMenu idef0={model.diagrams[diagramId]?.notation === 'idef0'} recent={recent} installable={installable} close={() => setMenu(false)} />
+      {menu === 'file' && (
+        <FileMenu idef0={model.diagrams[diagramId]?.notation === 'idef0'} recent={recent} installable={installable} close={() => setMenu(null)} />
+      )}
+      {menu === 'org' && (
+        <OrgMenu idef0={model.diagrams[diagramId]?.notation === 'idef0'} close={() => setMenu(null)} />
+      )}
+      {menu === 'settings' && (
+        <SettingsMenu close={() => setMenu(null)} />
       )}
     </header>
   );
