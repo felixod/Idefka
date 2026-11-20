@@ -4,6 +4,7 @@ import { AbcDialog } from './AbcDialog';
 import { DecomposeDialog } from './DecomposeDialog';
 import { NewModelDialog } from './NewModelDialog';
 import { OrgDialog } from './OrgDialog';
+import { SettingsDialog } from './SettingsDialog';
 
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 
@@ -111,7 +112,9 @@ function DialogBody({ dialog, close, modelName }: { dialog: DialogState; close: 
     case 'abc':
       return <AbcDialog close={close} />;
     case 'org':
-      return <OrgDialog close={close} />;
+      return <OrgDialog close={close} initialTab={dialog.tab} />;
+    case 'settings':
+      return <SettingsDialog close={close} />;
     case 'unsaved':
       return <UnsavedChanges dialog={dialog} modelName={modelName} />;
     case 'shortcuts':
