@@ -231,7 +231,7 @@ export function contractPrice(org: OrgData): ContractPrice {
   };
 }
 
-function kpiOf(note: string): string[] {
+export function kpiOf(note: string): string[] {
   if (!note) return [];
   return note
     .split(/(?<=[.;])\s+/)
@@ -384,4 +384,116 @@ export function orgDocsMd(org: OrgData, model: Model): string {
     if (w) lines.push(`| ${w.num} | ${w.name} | ${Math.round(value).toLocaleString('ru-RU')} |`);
   }
   return lines.join('\n') + '\n';
+}
+
+// ============================================================ Шаблонатор документов
+export const DEFAULT_TEMPLATES = {
+  polozhenie: `# Положение об отделе «{{ОТДЕЛ}}»
+{{КОМПАНИЯ}} · версия {{ВЕРСИЯ}} · {{ДАТА}}
+
+## 1. Общие положения
+{{ОБЩИЕ}}
+
+## 2. Цели и задачи отдела
+{{ЦЕЛИ}}
+
+## 3. Структура и штатная численность
+{{ТАБЛИЦА:ШТАТ}}
+{{ШТАТ_ИТОГО}}
+
+## 4. Функции отдела (из функциональной модели IDEF0)
+{{ТАБЛИЦА:ФУНКЦИИ}}
+
+## 5. Показатели эффективности
+{{ТАБЛИЦА:KPI}}
+
+## 6. Экономика отдела
+{{ЭКОНОМИКА}}
+
+## 7. Права и взаимодействие
+{{ПРАВА}}`,
+  di: `# Должностная инструкция — {{ДОЛЖНОСТЬ}}
+{{КОМПАНИЯ}} · отдел «{{ОТДЕЛ}}» · грейд {{ГРЕЙД}}
+
+## 1. Общие положения
+{{ОБЩИЕ}}
+
+## 2. Место в процессах (IDEF0) и обязанности
+{{ТАБЛИЦА:ПРОЦЕССЫ}}
+
+## 3. Показатели эффективности (KPI)
+{{ТАБЛИЦА:KPI}}
+
+## 4. Требования к знаниям
+{{ЗНАНИЯ}}
+
+## 5. Экономический вклад
+{{ЭКОНОМИКА}}
+
+## 6. Права и ответственность
+{{ПРАВА}}
+
+Оклад: {{ОКЛАД}} ₽/мес. Согласовано: руководитель отдела. Ознакомлен: сотрудник.`,
+};
+
+/** Предложение по созданию должности для работы без ответственной роли. */
+export interface RoleSuggestion {
+  wid: string;
+  workNum: string;
+  workName: string;
+  suggestedDepId: string;
+  suggestedDepMissing: boolean;
+  suggestedRoleName: string;
+}
+
+const DEP_BY_AREA: Array<[RegExp, string]> = [
+  [/^A11/, 'SD'], [/^A114/, 'INFRA'], [/^A12/, 'INFRA'], [/^A13/, 'FIELD'],
+  [/^A14/, 'SD'], [/^A2/, 'INFRA'], [/^A3/, 'DEVOPS'], [/^A4/, 'KNOW'],
+  [/^A5/, 'FIN'], [/^A63/, 'FIL'], [/^A6/, 'IMPL'],
+];
+
+export function depForWork(num: string): string {
+  for (const [re, dep] of DEP_BY_AREA) if (re.test(num)) return dep;
+  return 'OPS';
+}
+
+export function coverageGaps(org: OrgData, model: Model): RoleSuggestion[] {
+  const works = workIndex(model);
+  const covered = new Set<string>();
+  for (const r of roleFots(org)) for (const w of r.role.works ?? []) covered.add(w);
+  const depIds = new Set(org.departments.map((d) => d.id));
+  const out: RoleSuggestion[] = [];
+  for (const [wid, w] of works) {
+    if (covered.has(wid) || w.num === 'A0') continue;
+    const depId = depForWork(w.num);
+    const firstLine = w.name.split('\n')[0].replace(/^(Выполнять|Вести|Обеспечивать|Администрировать|Проводить)\s+/i, '');
+    out.push({
+      wid,
+      workNum: w.num,
+      workName: w.name,
+      suggestedDepId: depId,
+      suggestedDepMissing: !depIds.has(depId),
+      suggestedRoleName: firstLine.slice(0, 60),
+    });
+  }
+  return out.sort((a, b) => a.workNum.localeCompare(b.workNum));
+}
+
+export function upsertRole(org: OrgData, depId: string, role: {
+  name: string; grade?: string; salaryMin?: number; salaryMax?: number; fte?: number; works: string[];
+}): void {
+  const dep = org.departments.find((d) => d.id === depId);
+  if (!dep) return;
+  const rid = 'u' + Math.random().toString(36).slice(2, 8);
+  dep.roles.push({
+    id: rid, name: role.name, grade: role.grade ?? 'Middle',
+    salaryMin: role.salaryMin ?? 80000, salaryMax: role.salaryMax ?? 140000,
+    fte: role.fte ?? 1, works: role.works, note: 'создана из конструктора процессов',
+  });
+}
+
+export function createDepartment(org: OrgData, name: string, kind: OrgDepartment['kind'], parentId?: string): string {
+  const id = 'd' + Math.random().toString(36).slice(2, 8);
+  org.departments.push({ id, name, kind, mission: '', goals: [], parentId, roles: [] });
+  return id;
 }

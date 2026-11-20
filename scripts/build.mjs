@@ -24,6 +24,7 @@ const config = {
   target: ['chrome110', 'firefox115', 'safari16'],
   jsx: 'automatic',
   loader: { '.css': 'css' },
+  alias: { buffer: 'buffer/' },
   define: {
     'process.env.NODE_ENV': JSON.stringify(devMode ? 'development' : 'production'),
     __APP_VERSION__: JSON.stringify(pkg.version),
