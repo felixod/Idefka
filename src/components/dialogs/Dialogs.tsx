@@ -87,11 +87,11 @@ function About({ close }: { close: () => void }) {
         <img className="brand-full brand-dark" src="./logo-company-white.svg" alt="Логотип" />
       </div>
       <h2>
-        ИТ-модель холдинга <span className="muted">{APP_VERSION}</span>
+        Idefka <span className="muted">{APP_VERSION}</span>
       </h2>
       <p className="modal-text">
-        Редактор IDEF0-моделей с оргструктурой, стоимостью и генерацией положений и должностных инструкций. Корпоративный форк
-        Idefka. Работает в браузере и без интернета. Модели хранятся в открытом формате JSON (файлы .idef) у вас на компьютере.
+        Редактор диаграмм IDEF0, DFD, IDEF3, BPMN, EPC, UML и ERD со стоимостным анализом. Работает в браузере и без интернета. Модели хранятся в открытом формате JSON (файлы .idef) у вас на
+        компьютере.
       </p>
       <div className="modal-actions">
         <button className="btn primary" autoFocus onClick={close}>

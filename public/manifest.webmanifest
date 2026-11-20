@@ -1,7 +1,7 @@
 {
-  "name": "ИТ-модель холдинга (Idefka Enterprise)",
-  "short_name": "ИТ-модель",
-  "description": "Редактор IDEF0-моделей с оргструктурой, ФОТ и генерацией положений и должностных инструкций. Форк Idefka.",
+  "name": "Idefka",
+  "short_name": "Idefka",
+  "description": "Редактор диаграмм IDEF0, DFD, IDEF3, BPMN, EPC, UML и ERD со стоимостным анализом. Работает без интернета.",
   "lang": "ru",
   "id": "./",
   "start_url": "./",
