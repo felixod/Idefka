@@ -1,5 +1,9 @@
 import { useStore, commit } from '../../store';
-import { depFots, formatRub, orgOf, orgSummary, roleFots, workIndex } from '../../model/org';
+import type { ReactElement } from 'react';
+import {
+  contractPrice, depFots, depTree, formatRub, orgIssues, orgOf, orgSummary,
+  roleFots, workIndex, DEP_KIND_TITLE, type DepNode,
+} from '../../model/org';
 import { exportOrgCsv, exportOrgDocs } from '../../actions';
 import { Icon } from '../icons';
 
@@ -50,6 +54,22 @@ export function OrgDialog({ close }: { close: () => void }) {
   const deps = depFots(org);
   const roles = roleFots(org);
   const works = workIndex(model);
+  const tree = depTree(org);
+  const contract = contractPrice(org);
+  const issues = orgIssues(org, model);
+
+  const dumpTree = (nodes: DepNode[], depth: number): ReactElement[] =>
+    nodes.flatMap((node) => [
+      <div key={node.dep.id} style={{ paddingLeft: depth * 16 }}>
+        <b>{node.dep.name}</b> <span className="muted">({DEP_KIND_TITLE[node.dep.kind] ?? node.dep.kind})</span>
+        {node.dep.goals?.map((goal, i) => (
+          <div key={i} className="muted" style={{ paddingLeft: 16 }}>
+            • {goal}
+          </div>
+        ))}
+      </div>,
+      ...dumpTree(node.children, depth + 1),
+    ]);
 
   return (
     <div className="abc-dialog">
@@ -67,13 +87,51 @@ export function OrgDialog({ close }: { close: () => void }) {
 
       <section style={{ marginBottom: 12 }}>
         <div className="field-label" style={{ marginBottom: 6 }}>
-          Сводка
+          Иерархия подразделений и цели
+        </div>
+        {dumpTree(tree, 0)}
+      </section>
+
+      <section style={{ marginBottom: 12 }}>
+        <div className="field-label" style={{ marginBottom: 6 }}>
+          Цена договора на обслуживание
+        </div>
+        <div className="two-cols" style={{ gap: 10, marginBottom: 8 }}>
+          {numField('Накладные, %', Math.round(org.params.overheadRate * 1000) / 10, (v) => editOrg((o) => (o.params.overheadRate = v / 100), 'org-oh'), 'oh', 0.5)}
+          {numField('Маржа, %', Math.round(org.params.marginRate * 1000) / 10, (v) => editOrg((o) => (o.params.marginRate = v / 100), 'org-mg'), 'mg', 0.5)}
+          {numField('Объектов', org.params.sites, (v) => editOrg((o) => (o.params.sites = v), 'org-sites'), 'sites')}
+        </div>
+        <p className="modal-text">
+          ФОТ обслуживания <b>{formatRub(contract.serviceFotYear)}</b> + накладные{' '}
+          <b>{formatRub(contract.overhead)}</b> = себестоимость <b>{formatRub(contract.cost)}</b>; маржа{' '}
+          <b>{formatRub(contract.margin)}</b> → <b>цена договора {formatRub(contract.priceYear)}/год</b> (
+          {formatRub(contract.priceMonth)}/мес · {formatRub(contract.pricePerSiteMonth)}/объект/мес ·{' '}
+          {formatRub(contract.pricePerUserMonth)}/пользователь/мес · {formatRub(contract.pricePerTicket)}/обращение)
+        </p>
+      </section>
+
+      {issues.length > 0 && (
+        <section style={{ marginBottom: 12 }}>
+          <div className="field-label" style={{ marginBottom: 6 }}>
+            Согласованность с моделью ({issues.length})
+          </div>
+          {issues.slice(0, 8).map((issue, i) => (
+            <p key={i} className="field-hint">
+              ⚠ {issue.text}
+            </p>
+          ))}
+          {issues.length > 8 && <p className="field-hint">…и ещё {issues.length - 8}</p>}
+        </section>
+      )}
+
+      <section style={{ marginBottom: 12 }}>
+        <div className="field-label" style={{ marginBottom: 6 }}>
+          Сводка по компании
         </div>
         <p className="modal-text">
           Штат <b>{summary.totalFte}</b> ед. · ФОТ <b>{formatRub(summary.fotMonth)}</b>/мес ·{' '}
           <b>{formatRub(summary.fotYear)}</b>/год с взносами · цена обращения L1{' '}
-          <b>{formatRub(summary.ticketPrice)}</b> · поддержка объекта{' '}
-          <b>{formatRub(summary.costPerSiteYear)}</b>/год
+          <b>{formatRub(summary.ticketPrice)}</b>
         </p>
       </section>
 

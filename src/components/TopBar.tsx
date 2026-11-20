@@ -5,7 +5,7 @@ import { NOTATIONS, NOTATION_TABS } from '../model/notation';
 import type { Model, Notation } from '../model/types';
 import { exportPng, exportSvg, newFile, openDiagram, openFile, openRecentFile, printModel, save, switchNotation } from '../actions';
 import { canvasApi } from './canvas/Canvas';
-import { Icon, KindIcon, Logo } from './icons';
+import { Icon, KindIcon } from './icons';
 import { recentList } from '../platform';
 import { canInstall, install, onInstallChange } from '../pwa';
 
@@ -241,7 +241,7 @@ export function TopBar() {
     <header className="topbar">
       <div className="tb-left">
         <button className={'tb-btn menu-btn' + (menu ? ' on' : '')} onClick={() => setMenu(!menu)} aria-haspopup="menu">
-          <Logo />
+          <img className="brand-mark" src="./logo-mark.svg" alt="" />
           <span>Файл</span>
         </button>
         <div className="doc-name" title={filePath ?? 'Файл ещё не сохранён'}>

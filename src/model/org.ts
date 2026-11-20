@@ -4,10 +4,18 @@ import { boxNumber, diagramOrder } from './query';
 export const DEFAULT_ORG_PARAMS = {
   months: 12,
   socialRate: 0.302,
+  overheadRate: 0.25,
+  marginRate: 0.15,
   ticketsPerMonth: 1500,
   usersPerSite: 350,
   ticketsPerUserPerMonth: 0.8,
   sites: 8,
+};
+
+export const DEP_KIND_TITLE: Record<string, string> = {
+  service: 'обслуживание (в договор)',
+  development: 'развитие (проекты)',
+  internal: 'обеспечение',
 };
 
 export function orgOf(model: Model): OrgData | null {
@@ -131,6 +139,98 @@ export function orgSummary(org: OrgData): OrgSummary {
 export const formatRub = (value: number) =>
   `${Math.round(value).toLocaleString('ru-RU')} ₽`;
 
+/** Дерево подразделений: управления → отделы. */
+export interface DepNode {
+  dep: OrgDepartment;
+  children: DepNode[];
+}
+
+export function depTree(org: OrgData): DepNode[] {
+  const nodes = new Map<string, DepNode>(org.departments.map((dep) => [dep.id, { dep, children: [] }]));
+  const roots: DepNode[] = [];
+  for (const node of nodes.values()) {
+    const parent = node.dep.parentId ? nodes.get(node.dep.parentId) : undefined;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+
+/** Согласованность оргструктуры и IDEF0-модели. */
+export interface OrgIssue {
+  kind: 'role' | 'dep' | 'work';
+  text: string;
+}
+
+export function orgIssues(org: OrgData, model: Model): OrgIssue[] {
+  const issues: OrgIssue[] = [];
+  const works = workIndex(model);
+  const rolesById = new Map(roleFots(org).map((r) => [r.role.id, r.role]));
+  const assignedWorks = new Set<string>();
+
+  for (const r of roleFots(org)) {
+    if (!(r.role.works ?? []).length) issues.push({ kind: 'role', text: `Роль «${r.role.name}» не привязана ни к одной работе модели` });
+    for (const wid of r.role.works ?? []) {
+      if (!works.has(wid)) issues.push({ kind: 'role', text: `Роль «${r.role.name}»: работа ${wid} отсутствует в модели` });
+      else assignedWorks.add(wid);
+    }
+    if (r.role.reportsTo && !rolesById.has(r.role.reportsTo)) {
+      issues.push({ kind: 'role', text: `Роль «${r.role.name}»: руководитель ${r.role.reportsTo} не найден` });
+    }
+  }
+  for (const dep of org.departments) {
+    if (!(dep.goals ?? []).length) issues.push({ kind: 'dep', text: `У «${dep.name}» не заданы цели` });
+    if (dep.parentId && !org.departments.some((d) => d.id === dep.parentId)) {
+      issues.push({ kind: 'dep', text: `«${dep.name}»: вышестоящее управление ${dep.parentId} не найдено` });
+    }
+  }
+  const serviceDeps = new Set(org.departments.filter((d) => d.kind === 'service').map((d) => d.id));
+  for (const [wid, w] of works) {
+    if (w.num === 'A0') continue;
+    if (!assignedWorks.has(wid)) issues.push({ kind: 'work', text: `Работа ${w.num} «${w.name}» не покрыта ни одной ролью` });
+  }
+  if (!serviceDeps.size) issues.push({ kind: 'dep', text: 'Ни один отдел не помечен как обслуживание (kind=service) — цену договора посчитать нельзя' });
+  return issues;
+}
+
+/** Цена договора на обслуживание. */
+export interface ContractPrice {
+  serviceFotYear: number; // ФОТ обслуживания (service-отделы)
+  overhead: number; // накладные
+  cost: number; // себестоимость обслуживания
+  margin: number; // маржа
+  priceYear: number; // цена договора в год
+  priceMonth: number;
+  pricePerSiteMonth: number;
+  pricePerUserMonth: number;
+  pricePerTicket: number;
+}
+
+export function contractPrice(org: OrgData): ContractPrice {
+  const p = org.params;
+  const serviceDeps = new Set(org.departments.filter((d) => d.kind === 'service').map((d) => d.id));
+  const serviceFotYear = roleFots(org)
+    .filter((r) => serviceDeps.has(r.dep.id))
+    .reduce((sum, r) => sum + r.fotYear, 0);
+  const overhead = serviceFotYear * p.overheadRate;
+  const cost = serviceFotYear + overhead;
+  const margin = cost * p.marginRate;
+  const priceYear = cost + margin;
+  const users = p.sites * p.usersPerSite;
+  const ticketsYear = p.ticketsPerMonth * p.months;
+  return {
+    serviceFotYear,
+    overhead,
+    cost,
+    margin,
+    priceYear,
+    priceMonth: priceYear / p.months,
+    pricePerSiteMonth: priceYear / p.sites / p.months,
+    pricePerUserMonth: users > 0 ? priceYear / users / p.months : 0,
+    pricePerTicket: ticketsYear > 0 ? priceYear / ticketsYear : 0,
+  };
+}
+
 function kpiOf(note: string): string[] {
   if (!note) return [];
   return note
@@ -167,6 +267,9 @@ export function orgCsv(org: OrgData, model: Model): string {
   const s = orgSummary(org);
   rows.push(['Итого', '', '', '', num(s.totalFte), '', '', num(s.fotMonth), num(s.fotYear), '']);
   rows.push(['Юнит-экономика', 'Цена обращения L1', num(s.ticketPrice), 'Обращений на объект/год', num(s.siteTicketsYear), 'Стоимость объекта/год', num(s.costPerSiteYear), '', '', '']);
+  const c = contractPrice(org);
+  rows.push(['Договор', 'ФОТ обслуживания/год', num(c.serviceFotYear), 'Накладные', num(c.overhead), 'Себестоимость', num(c.cost), 'Маржа', num(c.margin), '']);
+  rows.push(['Договор', 'Цена/год', num(c.priceYear), 'Цена/мес', num(c.priceMonth), 'За объект/мес', num(c.pricePerSiteMonth), 'За пользователя/мес', num(c.pricePerUserMonth), 'За обращение ' + num(c.pricePerTicket)]);
   const head = rows[0].map(quote).join(';');
   const body = rows.slice(1).map((row) => row.map((cell) => quote(cell)).join(';'));
   return '﻿' + [head, ...body].join('\r\n');
@@ -175,16 +278,34 @@ export function orgCsv(org: OrgData, model: Model): string {
 /** Положения об отделах и должностные инструкции в один Markdown-файл. */
 export function orgDocsMd(org: OrgData, model: Model): string {
   const works = workIndex(model);
+  const roles = roleFots(org);
+  const byId = new Map(roles.map((r) => [r.role.id, r]));
   const cost = workFot(org);
+  const tree = depTree(org);
+  const contract = contractPrice(org);
   const lines: string[] = [
     `# Оргдокументы — ${model.meta.name}`,
     '',
     `Сгенерировано из IDEF0-модели. Взносы: +${Math.round(org.params.socialRate * 1000) / 10}%.`,
     '',
+    '## Иерархия подразделений',
+    '',
   ];
 
+  const dumpTree = (nodes: DepNode[], depth: number) => {
+    for (const node of nodes) {
+      lines.push(`${'  '.repeat(depth)}- **${node.dep.name}** (${DEP_KIND_TITLE[node.dep.kind] ?? node.dep.kind})`);
+      if (node.dep.goals?.length) {
+        for (const goal of node.dep.goals) lines.push(`${'  '.repeat(depth + 1)}- Цель: ${goal}`);
+      }
+      dumpTree(node.children, depth + 1);
+    }
+  };
+  dumpTree(tree, 0);
+
   for (const dep of org.departments) {
-    const depRoles = roleFots(org).filter((r) => r.dep.id === dep.id);
+    const depRoles = roles.filter((r) => r.dep.id === dep.id);
+    const parent = dep.parentId ? org.departments.find((d) => d.id === dep.parentId) : undefined;
     const depWorks = new Map<string, Set<string>>();
     for (const r of depRoles) {
       for (const wid of r.role.works ?? []) {
@@ -195,13 +316,19 @@ export function orgDocsMd(org: OrgData, model: Model): string {
     lines.push(
       '---', '',
       `# Положение об отделе «${dep.name}»`, '',
-      '## Назначение', '',
-      dep.mission || '(заполнить миссию отдела)', '',
-      '## Штат', '',
-      '| Роль | Грейд | FTE | Вилка оклада, ₽/мес |', '|---|---|---|---|',
+      '## Назначение и подчинённость', '',
+      `- ${dep.mission || '(заполнить миссию отдела)'}`,
+      parent ? `- Подчинённость: ${parent.name}` : '- Подчиняется непосредственно директору ИТ-компании',
+      `- Тип: ${DEP_KIND_TITLE[dep.kind] ?? dep.kind}`,
+      '',
+      '## Цели и задачи отдела', '',
     );
+    lines.push(...(dep.goals?.length ? dep.goals.map((g, i) => `${i + 1}. ${g}`) : ['(заполнить цели)']));
+    lines.push('', '## Штат', '',
+      '| Роль | Грейд | FTE | Подчиняется | Вилка оклада, ₽/мес |', '|---|---|---|---|---|');
     for (const r of depRoles) {
-      lines.push(`| ${r.role.name} | ${r.role.grade} | ${r.role.fte} | ${r.role.salaryMin.toLocaleString('ru-RU')} — ${r.role.salaryMax.toLocaleString('ru-RU')} |`);
+      const boss = r.role.reportsTo ? byId.get(r.role.reportsTo)?.role.name ?? r.role.reportsTo : '—';
+      lines.push(`| ${r.role.name} | ${r.role.grade} | ${r.role.fte} | ${boss} | ${r.role.salaryMin.toLocaleString('ru-RU')} — ${r.role.salaryMax.toLocaleString('ru-RU')} |`);
     }
     lines.push('', '## Функции отдела (из модели)', '');
     for (const [wid, rnames] of [...depWorks.entries()].sort((a, b) => (works.get(a[0])?.num ?? '').localeCompare(works.get(b[0])?.num ?? ''))) {
@@ -212,13 +339,18 @@ export function orgDocsMd(org: OrgData, model: Model): string {
     lines.push('');
   }
 
-  for (const r of roleFots(org)) {
+  for (const r of roles) {
+    const boss = r.role.reportsTo ? byId.get(r.role.reportsTo)?.role.name ?? r.role.reportsTo : 'директор ИТ-компании';
     lines.push(
       '---', '',
       `# ДИ — ${r.role.name}`, '',
-      `Отдел: ${r.dep.name}. Грейд: ${r.role.grade}. Оклад: ${r.role.salaryMin.toLocaleString('ru-RU')} — ${r.role.salaryMax.toLocaleString('ru-RU')} ₽/мес.`,
+      `Отдел: ${r.dep.name}. Грейд: ${r.role.grade}. Непосредственный руководитель: ${boss}.`,
+      `Оклад: ${r.role.salaryMin.toLocaleString('ru-RU')} — ${r.role.salaryMax.toLocaleString('ru-RU')} ₽/мес.`,
       '',
-      '## Место в процессах', '',
+      '## Цели должности', '',
+      ...(r.dep.goals?.length ? r.dep.goals.map((g) => `- ${g}`) : ['- (из целей отдела)']),
+      '',
+      '## Место в процессах и обязанности', '',
     );
     const roleWorks = (r.role.works ?? []).map((wid) => works.get(wid)).filter(Boolean) as WorkInfo[];
     for (const w of roleWorks) {
@@ -233,11 +365,15 @@ export function orgDocsMd(org: OrgData, model: Model): string {
   const s = orgSummary(org);
   lines.push(
     '---', '',
-    '# Сводка', '',
-    `- Штатных единиц: ${s.totalFte}`,
-    `- ФОТ/мес: ${formatRub(s.fotMonth)}; ФОТ/год с взносами: ${formatRub(s.fotYear)}`,
-    `- Цена обращения L1: ${formatRub(s.ticketPrice)}`,
-    `- Стоимость поддержки объекта (год): ${formatRub(s.costPerSiteYear)}`,
+    '# Прогноз стоимости и договор', '',
+    `- Штатных единиц всего: ${s.totalFte}; ФОТ/мес: ${formatRub(s.fotMonth)}; ФОТ/год с взносами: ${formatRub(s.fotYear)}`,
+    `- Себестоимость обслуживания (ФОТ service-отделов): ${formatRub(contract.serviceFotYear)}`,
+    `- Накладные (+${Math.round(org.params.overheadRate * 100)}%): ${formatRub(contract.overhead)}`,
+    `- Себестоимость с накладными: ${formatRub(contract.cost)}`,
+    `- Маржа (+${Math.round(org.params.marginRate * 100)}%): ${formatRub(contract.margin)}`,
+    `- **Цена договора: ${formatRub(contract.priceYear)}/год (${formatRub(contract.priceMonth)}/мес)**`,
+    `- В пересчёте: ${formatRub(contract.pricePerSiteMonth)}/объект/мес · ${formatRub(contract.pricePerUserMonth)}/пользователь/мес · ${formatRub(contract.pricePerTicket)}/обращение`,
+    `- Параметры: объектов ${org.params.sites} × ${org.params.usersPerSite} пользователей, ${org.params.ticketsPerMonth} обращений/мес`,
     '',
     '## Стоимость работ (распределение ФОТ)', '',
     '| Работа | Название | ₽/год |', '|---|---|---|',
