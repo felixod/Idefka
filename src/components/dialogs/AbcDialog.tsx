@@ -136,7 +136,7 @@ export function AbcDialog({ close }: { close: () => void }) {
         draft.abc.centers.push({ id, name: 'Персонал', note: 'ФОТ из org (Ф4)' });
         center = draft.abc.centers[draft.abc.centers.length - 1];
       }
-      const costs = workFot(draft);
+      const costs = workFot(draft.org!);
       for (const d of Object.values(draft.diagrams)) {
         for (const b of d.boxes) {
           if (b.costs) delete b.costs[center.id];

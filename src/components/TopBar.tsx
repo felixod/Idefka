@@ -290,7 +290,7 @@ function SettingsMenu({ close }: { close: () => void }) {
 export function TopBar() {
   const { model, diagramId, filePath, dirty, past, future, zoom, showGrid, showFrame, theme } = useStore();
   const [menu, setMenu] = useState<null | 'file' | 'org' | 'settings'>(null);
-  const recent = useRecentFiles(menu);
+  const recent = useRecentFiles(menu === 'file');
   const installable = useInstallable();
   const name = fileName(filePath) ?? model.meta.name ?? 'Без имени';
   const ThemeIcon = THEME_ICON[theme];
