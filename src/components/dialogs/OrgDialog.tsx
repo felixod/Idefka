@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { useStore, commit } from '../../store';
 import type { ReactElement } from 'react';
 import {
-  contractPrice, depFots, depTree, formatRub, orgIssues, orgOf, orgSummary,
-  roleFots, workIndex, DEP_KIND_TITLE, type DepNode,
+  contractPrice, coverageGaps, createDepartment, DEFAULT_TEMPLATES, depFots, depTree, formatRub,
+  orgIssues, orgOf, orgSummary, roleFots, upsertRole, workIndex, DEP_KIND_TITLE,
+  type DepNode, type RoleSuggestion,
 } from '../../model/org';
-import { exportOrgCsv, exportOrgDocs } from '../../actions';
+import { exportOrgCsv, exportOrgDocDocx, exportOrgDocs } from '../../actions';
 import { Icon } from '../icons';
+
+type Tab = 'struct' | 'proc' | 'docs';
 
 function editOrg(change: (org: NonNullable<ReturnType<typeof orgOf>>) => void, coalesceKey?: string) {
   commit((draft) => {
@@ -32,11 +36,12 @@ const numField = (label: string, value: number, set: (v: number) => void, key: s
 export function OrgDialog({ close }: { close: () => void }) {
   const { model } = useStore();
   const org = orgOf(model);
+  const [tab, setTab] = useState<Tab>('struct');
 
   if (!org) {
     return (
       <div className="abc-dialog">
-        <h2>Оргструктура и стоимость</h2>
+        <h2>Орг-конструктор</h2>
         <p className="modal-text">
           В этой модели нет раздела <code>org</code>: отделы, роли, оклады и привязка к работам IDEF0.
           Он хранится прямо в файле .idef и добавляется генератором или вручную (JSON-поле «org»).
@@ -57,6 +62,7 @@ export function OrgDialog({ close }: { close: () => void }) {
   const tree = depTree(org);
   const contract = contractPrice(org);
   const issues = orgIssues(org, model);
+  const gaps = coverageGaps(org, model);
 
   const dumpTree = (nodes: DepNode[], depth: number): ReactElement[] =>
     nodes.flatMap((node) => [
@@ -71,13 +77,23 @@ export function OrgDialog({ close }: { close: () => void }) {
       ...dumpTree(node.children, depth + 1),
     ]);
 
-  return (
-    <div className="abc-dialog">
-      <h2>Оргструктура и стоимость</h2>
-      <p className="modal-text">
-        Штат и ФОТ считаются из раздела org модели: оклад роли × FTE × {org.params.months} мес × (1 + взносы).
-      </p>
+  const tabsRow = (
+    <div className="tabs" style={{ marginBottom: 12 }}>
+      <button className={tab === 'struct' ? 'on' : ''} onClick={() => setTab('struct')}>
+        Структура и деньги
+      </button>
+      <button className={tab === 'proc' ? 'on' : ''} onClick={() => setTab('proc')}>
+        Процессы → должности {gaps.length > 0 && <span className="count">{gaps.length}</span>}
+      </button>
+      <button className={tab === 'docs' ? 'on' : ''} onClick={() => setTab('docs')}>
+        Документы (шаблонатор)
+      </button>
+    </div>
+  );
 
+  // ---------------------------------------------------------------- Структура
+  const structSection = (
+    <>
       <div className="two-cols" style={{ gap: 10, marginBottom: 12 }}>
         {numField('Месяцев в году', org.params.months, (v) => editOrg((o) => (o.params.months = v), 'org-months'), 'months')}
         {numField('Взносы, %', Math.round(org.params.socialRate * 1000) / 10, (v) => editOrg((o) => (o.params.socialRate = v / 100), 'org-social'), 'social', 0.1)}
@@ -205,15 +221,79 @@ export function OrgDialog({ close }: { close: () => void }) {
             </tbody>
           </table>
         </div>
-        <p className="field-hint">
-          Состав ролей и оклады хранятся в файле модели (поле org) — удобно менять генератором, файл остаётся совместимым с исходной Idefka.
-        </p>
       </section>
+    </>
+  );
+
+  // ---------------------------------------------------------------- Процессы → должности
+  const procSection = (
+    <>
+      <p className="modal-text">
+        Дерево работ IDEF0 без ответственной роли. Для каждой — предложение: подразделение (по области
+        процесса), название должности. Созданная должность сразу попадает в org и во все документы.
+      </p>
+      {gaps.length === 0 && (
+        <p className="modal-text">✓ Все работы модели покрыты ролями — предложений нет.</p>
+      )}
+      {gaps.map((gap) => (
+        <GapRow key={gap.wid} gap={gap} org={org} />
+      ))}
+    </>
+  );
+
+  // ---------------------------------------------------------------- Документы
+  const docsSection = org.templates ? (
+    <>
+      <p className="modal-text">
+        Шаблоны хранятся в файле модели. Теги: {'{{КОМПАНИЯ}} {{ОТДЕЛ}} {{ДОЛЖНОСТЬ}} {{ГРЕЙД}} '}
+        {'{{РУКОВОДИТЕЛЬ}} {{ОКЛАД}} {{ДАТА}} {{ОБЩИЕ}} {{ЦЕЛИ}} {{ЭКОНОМИКА}} {{ЗНАНИЯ}} {{ПРАВА}} '}
+        {'{{ШТАТ_ИТОГО}}'}; встроенные таблицы: {'{{ТАБЛИЦА:ШТАТ}} {{ТАБЛИЦА:ФУНКЦИИ}} '}
+        {'{{ТАБЛИЦА:KPI}} {{ТАБЛИЦА:ПРОЦЕССЫ}}'}. Строки «# / ##» — заголовки.
+      </p>
+      <section style={{ marginBottom: 12 }}>
+        <div className="field-label">Шаблон «Положение об отделе»</div>
+        <textarea
+          rows={12}
+          style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+          value={org.templates.polozhenie}
+          onChange={(e) => editOrg((o) => { if (o.templates) o.templates.polozhenie = e.target.value; }, 'tpl-pos')}
+        />
+      </section>
+      <section style={{ marginBottom: 12 }}>
+        <div className="field-label">Шаблон «Должностная инструкция»</div>
+        <textarea
+          rows={12}
+          style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+          value={org.templates.di}
+          onChange={(e) => editOrg((o) => { if (o.templates) o.templates.di = e.target.value; }, 'tpl-di')}
+        />
+      </section>
+      <DocExport org={org} />
+    </>
+  ) : (
+    <section style={{ marginBottom: 12 }}>
+      <p className="modal-text">Шаблоны документов ещё не созданы для этой модели.</p>
+      <button
+        className="btn primary"
+        onClick={() => editOrg((o) => { o.templates = { ...DEFAULT_TEMPLATES }; })}
+      >
+        Создать шаблоны по умолчанию
+      </button>
+    </section>
+  );
+
+  return (
+    <div className="abc-dialog">
+      <h2>Орг-конструктор: процессы → должности → документы</h2>
+      {tabsRow}
+      {tab === 'struct' && structSection}
+      {tab === 'proc' && procSection}
+      {tab === 'docs' && docsSection}
 
       <div className="modal-actions">
         <button className="btn" onClick={exportOrgCsv}>
           <Icon.money />
-          Смета ФОТ (CSV для Excel)
+          Смета ФОТ (CSV)
         </button>
         <button className="btn" onClick={exportOrgDocs}>
           <Icon.table />
@@ -224,5 +304,87 @@ export function OrgDialog({ close }: { close: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- строка предложения
+function GapRow({ gap, org }: { gap: RoleSuggestion; org: NonNullable<ReturnType<typeof orgOf>> }) {
+  const [depId, setDepId] = useState(gap.suggestedDepId);
+  const [name, setName] = useState(gap.suggestedRoleName);
+  const depMissing = !org.departments.some((d) => d.id === depId);
+
+  const create = () => {
+    commit((draft) => {
+      if (!draft.org) return;
+      if (!draft.org.departments.some((d) => d.id === depId)) {
+        createDepartment(draft.org, `Подразделение ${depId} [${gap.workNum}]`, 'internal');
+      }
+      upsertRole(draft.org, depId, { name, works: [gap.wid] });
+    });
+  };
+
+  return (
+    <div className="center-row" style={{ alignItems: 'center', gap: 8, padding: '6px 0', flexWrap: 'wrap' }}>
+      <b style={{ minWidth: 52 }}>{gap.workNum}</b>
+      <span style={{ flex: '1 1 260px' }} className="muted">{gap.workName.split('\n')[0]}</span>
+      <select value={depId} onChange={(e) => setDepId(e.target.value)} style={{ maxWidth: 220 }}>
+        {!org.departments.some((d) => d.id === depId) && (
+          <option value={depId}>{depId} (создать)</option>
+        )}
+        {org.departments.map((d) => (
+          <option key={d.id} value={d.id}>{d.name}</option>
+        ))}
+      </select>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        style={{ width: 220 }}
+        title="Название должности"
+      />
+      <button className="btn primary" onClick={create} disabled={!name.trim()}>
+        {depMissing ? 'Создать подразделение и должность' : 'Создать должность'}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- экспорт DOCX
+function DocExport({ org }: { org: NonNullable<ReturnType<typeof orgOf>> }) {
+  const [depId, setDepId] = useState(org.departments[0]?.id ?? '');
+  const [roleId, setRoleId] = useState('');
+  const roles = roleFots(org);
+
+  return (
+    <section style={{ marginBottom: 12 }}>
+      <div className="field-label" style={{ marginBottom: 6 }}>
+        Выгрузка в Word (DOCX) — по шаблонам выше
+      </div>
+      <div className="center-row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select value={depId} onChange={(e) => setDepId(e.target.value)} style={{ maxWidth: 260 }}>
+          {org.departments.map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </select>
+        <button className="btn" onClick={() => exportOrgDocDocx('polozhenie', depId)} disabled={!depId}>
+          DOCX: Положение
+        </button>
+      </div>
+      <div className="center-row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+        <select value={roleId} onChange={(e) => setRoleId(e.target.value)} style={{ maxWidth: 320 }}>
+          <option value="">— выберите должность —</option>
+          {roles.map((r) => (
+            <option key={r.role.id} value={r.role.id}>
+              {r.role.name} ({r.dep.name})
+            </option>
+          ))}
+        </select>
+        <button className="btn" onClick={() => exportOrgDocDocx('di', roleId)} disabled={!roleId}>
+          DOCX: Должностная инструкция
+        </button>
+      </div>
+      <p className="field-hint">
+        Документ собирается в браузере по шаблону и данным модели (штат, функции с [A-узлами], KPI, вклад ₽ по Ф4).
+      </p>
+    </section>
   );
 }

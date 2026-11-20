@@ -198,9 +198,15 @@ export interface OrgParams {
   sites: number;
 }
 
+export interface OrgDocTemplates {
+  polozhenie: string;
+  di: string;
+}
+
 export interface OrgData {
   departments: OrgDepartment[];
   params: OrgParams;
+  templates?: OrgDocTemplates;
 }
 
 export interface Model {
