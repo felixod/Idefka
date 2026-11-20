@@ -170,19 +170,28 @@ export interface OrgRole {
   salaryMax: number;
   fte: number;
   works: string[]; // id работ модели, к которым приписана роль
+  reportsTo?: string; // id роли непосредственного руководителя
   note: string;
 }
+
+/** kind: service — обслуживание (в цену договора), development — развитие (проекты), internal — обеспечение */
+export type OrgDepKind = 'service' | 'development' | 'internal';
 
 export interface OrgDepartment {
   id: string;
   name: string;
   mission: string;
+  kind: OrgDepKind;
+  parentId?: string; // id вышестоящего управления
+  goals: string[]; // цели и задачи отдела/управления
   roles: OrgRole[];
 }
 
 export interface OrgParams {
   months: number;
   socialRate: number; // доля социальных взносов, например 0.302
+  overheadRate: number; // накладные расходы от ФОТ обслуживания
+  marginRate: number; // маржа в цене договора
   ticketsPerMonth: number;
   usersPerSite: number;
   ticketsPerUserPerMonth: number;
