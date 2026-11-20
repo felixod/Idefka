@@ -4,6 +4,7 @@ import { AbcDialog } from './AbcDialog';
 import { DecomposeDialog } from './DecomposeDialog';
 import { NewModelDialog } from './NewModelDialog';
 import { OrgDialog } from './OrgDialog';
+import { SettingsDialog } from './SettingsDialog';
 
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 

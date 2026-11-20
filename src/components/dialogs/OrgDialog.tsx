@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import {
   coverageGaps, createDepartment, depFots, depTree, formatRub, orgIssues, orgOf, orgSummary,
   roleFots, upsertRole, workIndex, DEP_KIND_TITLE,
-  type DepNode, type RoleSuggestion,
+  type DepNode, type OrgDepartment, type RoleSuggestion,
 } from '../../model/org';
 import { exportOrgCsv, exportOrgDocs } from '../../actions';
 import { Icon } from '../icons';
@@ -18,25 +18,49 @@ function editOrg(change: (org: NonNullable<ReturnType<typeof orgOf>>) => void, c
   }, coalesceKey);
 }
 
-const numField = (label: string, value: number, set: (v: number) => void, key: string, step = 1) => (
-  <label className="field" key={key}>
-    <span className="field-label">{label}</span>
-    <input
-      type="number"
-      step={step}
-      value={value}
-      onChange={(e) => {
-        const next = Number(e.target.value);
-        if (Number.isFinite(next) && next >= 0) set(next);
-      }}
-    />
-  </label>
-);
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="f-field">
+      <span className="field-label">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function NumField({ label, value, set, step = 1 }: { label: string; value: number; set: (v: number) => void; step?: number }) {
+  return (
+    <Field label={label}>
+      <input
+        type="number"
+        step={step}
+        value={value}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          if (Number.isFinite(next) && next >= 0) set(next);
+        }}
+      />
+    </Field>
+  );
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="f-card">
+      <span className="field-label">{title}</span>
+      {children}
+    </section>
+  );
+}
 
 export function OrgDialog({ close, initialTab }: { close: () => void; initialTab?: Tab }) {
   const { model } = useStore();
   const org = orgOf(model);
   const [tab, setTab] = useState<Tab>(initialTab ?? 'struct');
+  const [showNewDep, setShowNewDep] = useState(false);
+  const [ndName, setNdName] = useState('');
+  const [ndKind, setNdKind] = useState<OrgDepartment['kind']>('internal');
+  const [ndParent, setNdParent] = useState('');
+  const [query, setQuery] = useState('');
 
   if (!org) {
     return (
@@ -77,63 +101,89 @@ export function OrgDialog({ close, initialTab }: { close: () => void; initialTab
     ]);
 
   const tabsRow = (
-    <div className="tabs" style={{ marginBottom: 12 }}>
+    <div className="seg" style={{ marginBottom: 14 }}>
       <button className={tab === 'struct' ? 'on' : ''} onClick={() => setTab('struct')}>
         Структура и подразделения
       </button>
       <button className={tab === 'proc' ? 'on' : ''} onClick={() => setTab('proc')}>
-        Процессы → должности {gaps.length > 0 && <span className="count">{gaps.length}</span>}
+        Процессы → должности{gaps.length > 0 ? ` (${gaps.length})` : ''}
+      </button>
+    </div>
+  );
+
+  // ---------------------------------------------------------------- Структура
+  const createDepForm = showNewDep && (
+    <div className="inline-form">
+      <input placeholder="Название подразделения" value={ndName} onChange={(e) => setNdName(e.target.value)} style={{ flex: '1 1 220px' }} />
+      <select value={ndKind} onChange={(e) => setNdKind(e.target.value as OrgDepartment['kind'])}>
+        <option value="internal">внутреннее</option>
+        <option value="service">обслуживание (в договор)</option>
+        <option value="development">развитие (проекты)</option>
+      </select>
+      <select value={ndParent} onChange={(e) => setNdParent(e.target.value)}>
+        <option value="">— без вышестоящего —</option>
+        {org.departments.map((d) => (
+          <option key={d.id} value={d.id}>{d.name}</option>
+        ))}
+      </select>
+      <button
+        className="btn primary"
+        disabled={!ndName.trim()}
+        onClick={() => {
+          commit((draft) => {
+            if (!draft.org) return;
+            createDepartment(draft.org, ndName.trim(), ndKind, ndParent || undefined);
+          });
+          setShowNewDep(false);
+          setNdName('');
+          setNdParent('');
+        }}
+      >
+        Создать
       </button>
     </div>
   );
 
   const structSection = (
     <>
-      <div className="two-cols" style={{ gap: 10, marginBottom: 12 }}>
-        {numField('Месяцев в году', org.params.months, (v) => editOrg((o) => (o.params.months = v), 'org-months'), 'months')}
-        {numField('Взносы, %', Math.round(org.params.socialRate * 1000) / 10, (v) => editOrg((o) => (o.params.socialRate = v / 100), 'org-social'), 'social', 0.1)}
-        {numField('Обращений/мес', org.params.ticketsPerMonth, (v) => editOrg((o) => (o.params.ticketsPerMonth = v), 'org-tickets'), 'tickets', 10)}
-        {numField('Пользователей на объекте', org.params.usersPerSite, (v) => editOrg((o) => (o.params.usersPerSite = v), 'org-users'), 'users', 10)}
+      <div className="fgrid">
+        <NumField label="Месяцев в году" value={org.params.months} set={(v) => editOrg((o) => (o.params.months = v), 'org-months')} />
+        <NumField label="Взносы, %" value={Math.round(org.params.socialRate * 1000) / 10} set={(v) => editOrg((o) => (o.params.socialRate = v / 100), 'org-social')} step={0.1} />
+        <NumField label="Обращений/мес" value={org.params.ticketsPerMonth} set={(v) => editOrg((o) => (o.params.ticketsPerMonth = v), 'org-tickets')} step={10} />
+        <NumField label="Пользователей на объекте" value={org.params.usersPerSite} set={(v) => editOrg((o) => (o.params.usersPerSite = v), 'org-users')} step={10} />
       </div>
 
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label" style={{ marginBottom: 6 }}>
-          Иерархия подразделений и цели
-        </div>
+      <Card title="Иерархия подразделений и цели">
         {dumpTree(tree, 0)}
-      </section>
+        <div style={{ marginTop: 10 }}>
+          {!showNewDep ? (
+            <button className="btn" onClick={() => setShowNewDep(true)}>+ Добавить подразделение</button>
+          ) : (
+            createDepForm
+          )}
+        </div>
+      </Card>
 
       {issues.length > 0 && (
-        <section style={{ marginBottom: 12 }}>
-          <div className="field-label" style={{ marginBottom: 6 }}>
-            Согласованность с моделью ({issues.length})
-          </div>
+        <Card title={`Согласованность с моделью (${issues.length})`}>
           {issues.slice(0, 8).map((issue, i) => (
-            <p key={i} className="field-hint">
-              ⚠ {issue.text}
-            </p>
+            <p key={i} className="field-hint">⚠ {issue.text}</p>
           ))}
           {issues.length > 8 && <p className="field-hint">…и ещё {issues.length - 8}</p>}
-        </section>
+        </Card>
       )}
 
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label" style={{ marginBottom: 6 }}>
-          Сводка по компании
-        </div>
+      <Card title="Сводка по компании">
         <p className="modal-text">
           Штат <b>{summary.totalFte}</b> ед. · ФОТ <b>{formatRub(summary.fotMonth)}</b>/мес ·{' '}
           <b>{formatRub(summary.fotYear)}</b>/год с взносами · цена обращения L1{' '}
           <b>{formatRub(summary.ticketPrice)}</b>
         </p>
-      </section>
+      </Card>
 
-      <section style={{ marginBottom: 12 }}>
-        <div className="field-label" style={{ marginBottom: 6 }}>
-          Отделы
-        </div>
-        <div className="table-wrap">
-          <table>
+      <Card title="Отделы">
+        <div className="table-wrap sticky">
+          <table className="zebra">
             <thead>
               <tr>
                 <th>Отдел</th>
@@ -149,23 +199,18 @@ export function OrgDialog({ close, initialTab }: { close: () => void; initialTab
                   <td>{d.dep.name}</td>
                   <td className="num">{d.fte}</td>
                   <td className="num">{formatRub(d.fotMonth)}</td>
-                  <td className="num">
-                    <b>{formatRub(d.fotYear)}</b>
-                  </td>
+                  <td className="num"><b>{formatRub(d.fotYear)}</b></td>
                   <td className="num">{Math.round(d.share * 100)}%</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+      </Card>
 
-      <section className="abc-report">
-        <div className="field-label" style={{ marginBottom: 6 }}>
-          Роли и привязка к работам
-        </div>
-        <div className="table-wrap">
-          <table>
+      <Card title="Роли и привязка к работам">
+        <div className="table-wrap sticky">
+          <table className="zebra">
             <thead>
               <tr>
                 <th>Роль</th>
@@ -188,30 +233,46 @@ export function OrgDialog({ close, initialTab }: { close: () => void; initialTab
                     {r.role.salaryMin.toLocaleString('ru-RU')}–{r.role.salaryMax.toLocaleString('ru-RU')}
                   </td>
                   <td className="num">{formatRub(r.fotYear)}</td>
-                  <td>
-                    {(r.role.works ?? [])
-                      .map((w) => works.get(w)?.num ?? w)
-                      .join(' ')}
-                  </td>
+                  <td>{(r.role.works ?? []).map((w) => works.get(w)?.num ?? w).join(' ')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+        <p className="card-hint">
+          Состав ролей и оклады хранятся в файле модели (поле org) — файл остаётся совместимым с исходной Idefka.
+        </p>
+      </Card>
     </>
   );
+
+  // ---------------------------------------------------------------- Процессы → должности
+  const q = query.trim().toLowerCase();
+  const gapsFiltered = q
+    ? gaps.filter((g) => g.workNum.toLowerCase().includes(q) || g.workName.toLowerCase().includes(q))
+    : gaps;
 
   const procSection = (
     <>
       <p className="modal-text">
-        Дерево работ IDEF0 без ответственной роли. Для каждой — предложение: подразделение (по области
-        процесса), название должности. Созданная должность сразу попадает в org и во все документы.
+        Работы IDEF0 без ответственной роли. Подразделение предложено по области процесса — при создании
+        должность сразу попадает в org, в расчёты и во все документы.
       </p>
+      <div className="inline-form">
+        <input
+          placeholder="Поиск по номеру или названию…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ flex: '1 1 240px' }}
+        />
+        <span className="muted" style={{ fontSize: 12 }}>
+          {gaps.length === 0 ? '✓ всё покрыто' : `непокрытых: ${gaps.length}`}
+        </span>
+      </div>
       {gaps.length === 0 && (
         <p className="modal-text">✓ Все работы модели покрыты ролями — предложений нет.</p>
       )}
-      {gaps.map((gap) => (
+      {gapsFiltered.map((gap) => (
         <GapRow key={gap.wid} gap={gap} org={org} />
       ))}
     </>
@@ -245,6 +306,7 @@ export function OrgDialog({ close, initialTab }: { close: () => void; initialTab
 function GapRow({ gap, org }: { gap: RoleSuggestion; org: NonNullable<ReturnType<typeof orgOf>> }) {
   const [depId, setDepId] = useState(gap.suggestedDepId);
   const [name, setName] = useState(gap.suggestedRoleName);
+  const [done, setDone] = useState(false);
   const depMissing = !org.departments.some((d) => d.id === depId);
 
   const create = () => {
@@ -255,13 +317,26 @@ function GapRow({ gap, org }: { gap: RoleSuggestion; org: NonNullable<ReturnType
       }
       upsertRole(draft.org, depId, { name, works: [gap.wid] });
     });
+    setDone(true);
   };
 
+  if (done) {
+    return (
+      <div className="gap-row" style={{ opacity: 0.55 }}>
+        <span className="gap-num">{gap.workNum}</span>
+        <span className="gap-name" style={{ color: 'var(--icom-i)' }}>✓ должность «{name}» создана</span>
+        <span />
+        <span />
+        <button className="btn" onClick={() => setDone(false)}>Отменить</button>
+      </div>
+    );
+  }
+
   return (
-    <div className="center-row" style={{ alignItems: 'center', gap: 8, padding: '6px 0', flexWrap: 'wrap' }}>
-      <b style={{ minWidth: 52 }}>{gap.workNum}</b>
-      <span style={{ flex: '1 1 260px' }} className="muted">{gap.workName.split('\n')[0]}</span>
-      <select value={depId} onChange={(e) => setDepId(e.target.value)} style={{ maxWidth: 220 }}>
+    <div className="gap-row">
+      <span className="gap-num">{gap.workNum}</span>
+      <span className="gap-name" title={gap.workName}>{gap.workName.split('\n')[0]}</span>
+      <select value={depId} onChange={(e) => setDepId(e.target.value)}>
         {!org.departments.some((d) => d.id === depId) && (
           <option value={depId}>{depId} (создать)</option>
         )}
@@ -269,14 +344,9 @@ function GapRow({ gap, org }: { gap: RoleSuggestion; org: NonNullable<ReturnType
           <option key={d.id} value={d.id}>{d.name}</option>
         ))}
       </select>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        style={{ width: 220 }}
-        title="Название должности"
-      />
+      <input value={name} onChange={(e) => setName(e.target.value)} title="Название должности" />
       <button className="btn primary" onClick={create} disabled={!name.trim()}>
-        {depMissing ? 'Создать подразделение и должность' : 'Создать должность'}
+        {depMissing ? '+ подр. и должность' : '+ должность'}
       </button>
     </div>
   );
