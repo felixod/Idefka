@@ -3,7 +3,7 @@ import { getState, redo, setState, undo, useStore, type ThemePref } from '../sto
 import { diagramOrder, diagramPath, diagramTitle, nodeOf } from '../model/query';
 import { NOTATIONS, NOTATION_TABS } from '../model/notation';
 import type { Model, Notation } from '../model/types';
-import { exportPng, exportSvg, newFile, openDiagram, openFile, openRecentFile, printModel, save, switchNotation } from '../actions';
+import { exportOrgCsv, exportOrgDocs, exportPng, exportSvg, newFile, openDiagram, openFile, openRecentFile, printModel, save, switchNotation } from '../actions';
 import { canvasApi } from './canvas/Canvas';
 import { Icon, KindIcon } from './icons';
 import { recentList } from '../platform';
@@ -289,7 +289,7 @@ function SettingsMenu({ close }: { close: () => void }) {
 
 export function TopBar() {
   const { model, diagramId, filePath, dirty, past, future, zoom, showGrid, showFrame, theme } = useStore();
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenu] = useState<null | 'file' | 'org' | 'settings'>(null);
   const recent = useRecentFiles(menu);
   const installable = useInstallable();
   const name = fileName(filePath) ?? model.meta.name ?? 'Без имени';
