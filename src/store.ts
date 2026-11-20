@@ -40,12 +40,13 @@ export interface State {
   theme: ThemePref;
   showGrid: boolean;
   showFrame: boolean;
+  explorerOpen: boolean;
   dialog: DialogState | null;
   toast: { text: string; id: number } | null;
   zoom: number;
 }
 
-type Prefs = Partial<Pick<State, 'theme' | 'showGrid' | 'showFrame'>>;
+type Prefs = Partial<Pick<State, 'theme' | 'showGrid' | 'showFrame' | 'explorerOpen'>>;
 
 const PREFS_KEY = 'cloneapp:prefs';
 const HISTORY_LIMIT = 300;
@@ -72,6 +73,7 @@ let state: State = {
   future: [],
   theme: prefs.theme ?? 'system',
   showGrid: prefs.showGrid ?? true,
+  explorerOpen: prefs.explorerOpen ?? true,
   showFrame: prefs.showFrame ?? true,
   dialog: null,
   toast: null,
@@ -84,7 +86,7 @@ export const getState = () => state;
 
 export function setState(patch: Partial<State>) {
   state = { ...state, ...patch };
-  if ('theme' in patch || 'showGrid' in patch || 'showFrame' in patch) savePrefs();
+  if ('theme' in patch || 'showGrid' in patch || 'showFrame' in patch || 'explorerOpen' in patch) savePrefs();
   listeners.forEach((listener) => listener());
 }
 
@@ -224,6 +226,7 @@ function loadPrefs(): Prefs {
       theme: THEMES.includes(saved.theme) ? saved.theme : undefined,
       showGrid: typeof saved.showGrid === 'boolean' ? saved.showGrid : undefined,
       showFrame: typeof saved.showFrame === 'boolean' ? saved.showFrame : undefined,
+      explorerOpen: typeof saved.explorerOpen === 'boolean' ? saved.explorerOpen : undefined,
     };
   } catch {
     return {};
@@ -231,9 +234,9 @@ function loadPrefs(): Prefs {
 }
 
 function savePrefs() {
-  const { theme, showGrid, showFrame } = state;
+  const { theme, showGrid, showFrame, explorerOpen } = state;
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ theme, showGrid, showFrame }));
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ theme, showGrid, showFrame, explorerOpen }));
   } catch {
     return;
   }

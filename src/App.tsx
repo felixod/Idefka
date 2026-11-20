@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { getState, subscribe, useStore } from './store';
+import { getState, setState, subscribe, useStore } from './store';
 import { autosave, openContent, restoreAutosave } from './actions';
 import { onLaunchFile } from './platform';
 import { handleKeyDown } from './shortcuts';
 import { Canvas } from './components/canvas/Canvas';
 import { TopBar, fileName } from './components/TopBar';
 import { Explorer } from './components/Explorer';
+import { Icon } from './components/icons';
 import { Inspector } from './components/inspector/Inspector';
 import { StatusBar } from './components/StatusBar';
 import { Dialogs, Toast } from './components/dialogs/Dialogs';
@@ -54,6 +55,7 @@ function warnBeforeLeaving(event: BeforeUnloadEvent) {
 
 export function App() {
   const state = useStore();
+  const explorerOpen = state.explorerOpen;
 
   useEffect(() => {
     const scheme = darkScheme();
@@ -80,8 +82,18 @@ export function App() {
   return (
     <div className="app">
       <TopBar />
-      <div className="workspace">
-        <Explorer />
+      <div className={'workspace' + (explorerOpen ? '' : ' explorer-closed')}>
+        {explorerOpen ? (
+          <Explorer />
+        ) : (
+          <button
+            className="explorer-rail"
+            title="Показать панель модели"
+            onClick={() => setState({ explorerOpen: true })}
+          >
+            <Icon.chevron />
+          </button>
+        )}
         <Canvas />
         <Inspector />
       </div>

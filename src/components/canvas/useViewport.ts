@@ -57,13 +57,20 @@ export function useViewport(wrapRef: { current: HTMLDivElement | null }, diagram
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const current = viewRef.current;
-      if (e.shiftKey && !e.ctrlKey) {
-        setView({ ...current, x: current.x - (e.deltaY || e.deltaX) });
+      const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX;
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      if (e.ctrlKey) {
+        // Ctrl+колесо или щипок трекпада — масштаб вокруг курсора
+        const rect = element.getBoundingClientRect();
+        zoomAt(Math.exp(-dy * 0.01), e.clientX - rect.left, e.clientY - rect.top);
         return;
       }
-      const rect = element.getBoundingClientRect();
-      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-      zoomAt(Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0016)), e.clientX - rect.left, e.clientY - rect.top);
+      // колесо — прокрутка листа; Shift+колесо — горизонталь
+      if (e.shiftKey && !dx) {
+        setView({ ...current, x: current.x - dy });
+        return;
+      }
+      setView({ x: current.x - dx, y: current.y - dy });
     };
     element.addEventListener('wheel', onWheel, { passive: false });
     return () => element.removeEventListener('wheel', onWheel);
