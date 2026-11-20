@@ -109,7 +109,7 @@ function ArrowList({ model, diagram, sel }: { model: Model; diagram: Diagram; se
 }
 
 export function Explorer() {
-  const { model, diagramId, sel } = useStore();
+  const { model, diagramId, sel, explorerOpen } = useStore();
   const [tab, setTab] = useState<Tab>('tree');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const root = model.diagrams[rootOf(model, diagramId)];
@@ -124,21 +124,23 @@ export function Explorer() {
   };
 
   return (
-    <aside className="panel explorer">
-      <div className="tabs">
+    <aside className={'panel explorer' + (explorerOpen ? '' : ' closed')}>
+      <div className="panel-top">
+        <button
+          className="panel-collapse"
+          title="Свернуть панель"
+          onClick={() => setState({ explorerOpen: false })}
+        >
+          <Icon.chevron />
+        </button>
+        <div className="tabs">
         <button className={tab === 'tree' ? 'on' : ''} onClick={() => setTab('tree')}>
           Модель
         </button>
         <button className={tab === 'arrows' ? 'on' : ''} onClick={() => setTab('arrows')}>
           Стрелки <span className="count">{diagram.arrows.length}</span>
         </button>
-        <button
-          className="tab-collapse"
-          title="Свернуть панель"
-          onClick={() => setState({ explorerOpen: false })}
-        >
-          <Icon.chevron />
-        </button>
+        </div>
       </div>
       <div className="panel-scroll">
         {tab === 'tree' && (

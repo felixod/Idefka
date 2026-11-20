@@ -83,9 +83,8 @@ export function App() {
     <div className="app">
       <TopBar />
       <div className={'workspace' + (explorerOpen ? '' : ' explorer-closed')}>
-        {explorerOpen ? (
-          <Explorer />
-        ) : (
+        <Explorer />
+        {!explorerOpen && (
           <button
             className="explorer-rail"
             title="Показать панель модели"
