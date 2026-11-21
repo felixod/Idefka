@@ -262,6 +262,7 @@ export function orgCsv(org: OrgData, model: Model): string {
       (r.role.works ?? []).map((w) => works.get(w)?.num ?? w).join(' '),
     ]);
   }
+  const s = orgSummary(org);
   for (const d of depFots(org)) {
     rows.push(['Отдел', d.dep.name, '', '', num(d.fte), '', '', num(d.fotMonth), num(d.fotYear), num(d.share * 100) + '%']);
   }
