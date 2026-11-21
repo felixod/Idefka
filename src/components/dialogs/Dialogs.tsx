@@ -4,7 +4,7 @@ import { AbcDialog } from './AbcDialog';
 import { AuditDialog } from './AuditDialog';
 import { DecomposeDialog } from './DecomposeDialog';
 import { NewModelDialog } from './NewModelDialog';
-import { OrgDialog } from './OrgDialog';
+import { OrgWorkspace } from '../OrgWorkspace';
 import { SettingsDialog } from './SettingsDialog';
 
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
@@ -112,8 +112,6 @@ function DialogBody({ dialog, close, modelName }: { dialog: DialogState; close: 
       return <NewModelDialog close={close} />;
     case 'abc':
       return <AbcDialog close={close} />;
-    case 'org':
-      return <OrgDialog close={close} initialTab={dialog.tab} />;
     case 'audit':
       return <AuditDialog close={close} />;
     case 'settings':
@@ -135,6 +133,10 @@ export function Dialogs() {
     if (dialog.kind === 'unsaved') dialog.resolve('cancel');
     else setState({ dialog: null });
   };
+
+  if (dialog.kind === 'org') {
+    return <OrgWorkspace initialTab={dialog.tab} close={close} />;
+  }
 
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && close()}>
