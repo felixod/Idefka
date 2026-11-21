@@ -5,9 +5,10 @@ import { idefShapes } from './idef';
 import { bpmnShapes } from './bpmn';
 import { epcShapes } from './epc';
 import { umlShapes } from './uml';
+import { orgShapes } from './orgchart';
 import type { ShapeSet } from './types';
 
-const SHAPES: ShapeSet = { ...idefShapes, ...bpmnShapes, ...epcShapes, ...umlShapes };
+const SHAPES: ShapeSet = { ...idefShapes, ...bpmnShapes, ...epcShapes, ...umlShapes, ...orgShapes };
 
 export function BoxShape({ model, diagram, box, interactive }: { model: Model; diagram: Diagram; box: Box; interactive: boolean }) {
   const draw = SHAPES[box.kind] ?? SHAPES.activity!;
@@ -49,6 +50,10 @@ export function nameRect(box: Box): NameRect | null {
       return { x, y: y + 12, w: w - 12, h: 44, align: 'left', size: 12.5 };
     case 'umlNote':
       return { x, y, w, h, align: 'left', size: 11.5 };
+    case 'orgBox':
+      return { x: x + 6, y: y + 18, w: w - 12, h: h - 20, align: 'center', size: 12 };
+    case 'orgRole':
+      return { x: x + 6, y: y + 12, w: w - 12, h: h - 14, align: 'center', size: 11.5 };
     default:
       return null;
   }
