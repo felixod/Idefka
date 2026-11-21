@@ -139,11 +139,11 @@ export const exportOrgDocDocx = (kind: 'polozhenie' | 'di', scopeId: string) =>
         ОБЩИЕ: `Отдел — структурное подразделение компании. Подчинение: ${dep.parentId ? org.departments.find((d) => d.id === dep.parentId)?.name ?? '—' : 'директору ИТ-компании'}. Тип: ${dep.kind}.`,
         ЦЕЛИ: dep.goals?.map((g, i) => `${i + 1}. ${g}`).join('; ') || '(заполнить)',
         ШТАТ_ИТОГО: `Итого штатных единиц: ${depRoles.reduce((s, r) => s + r.role.fte, 0)}.`,
-        ЭКОНОМИКА: `ФОТ отдела: ${Math.round(depRoles.reduce((s, r) => s + r.fotYear, 0)).toLocaleString('ru-RU')} ₽/год (с взносами).`,
+        РЕСУРСЫ: `Отдел обеспечивается: персонал (${depRoles.reduce((s, r) => s + r.role.fte, 0)} штатных единиц), инструментами и системами согласно каталогу сервисов; условия оплаты — согласно штатному расписанию.`,
         ПРАВА: 'Запрашивать информацию у смежных отделов и предприятий; приостанавливать изменения вне CAB; эскалировать владельцу процесса.',
       };
       tables = {
-        ШТАТ: { headers: ['Роль', 'Грейд', 'FTE', 'Оклад, ₽/мес'],
+        ШТАТ: { headers: ['Роль', 'Грейд', 'FTE', 'Подчиняется'],
           rows: depRoles.map((r) => [r.role.name, r.role.grade, String(r.role.fte),
             `${r.role.salaryMin.toLocaleString('ru-RU')}–${r.role.salaryMax.toLocaleString('ru-RU')}`]) },
         ФУНКЦИИ: { headers: ['Узел', 'Работа (IDEF0)', 'Исполнители'],
@@ -167,17 +167,17 @@ export const exportOrgDocDocx = (kind: 'polozhenie' | 'di', scopeId: string) =>
         ОТДЕЛ: found.dep.name,
         ГРЕЙД: found.role.grade,
         РУКОВОДИТЕЛЬ: boss,
-        ОКЛАД: `${found.role.salaryMin.toLocaleString('ru-RU')}–${found.role.salaryMax.toLocaleString('ru-RU')}`,
+
         ДАТА: date,
         ОБЩИЕ: `Специалист отдела «${found.dep.name}», грейд ${found.role.grade}. Непосредственный руководитель: ${boss}.`,
         ЗНАНИЯ: 'Профстандарт «Специалист по технической поддержке ИКС» (приказ Минтруда № 675н) — уровень грейда; ГОСТ Р ИСО/МЭК 14764; регламенты процессов модели и БЗ своего домена.',
-        ЭКОНОМИКА: `ФОТ роли: ${Math.round(found.fotYear).toLocaleString('ru-RU')} ₽/год. Вклад в работы (Ф4): ${rw.map((w) => `${works.get(w)?.num} — ${Math.round(found.fotYear / rw.length).toLocaleString('ru-RU')} ₽/год`).join('; ')}`,
+        РЕСУРСЫ: 'Роль обеспечивается инструментами и системами согласно каталогу сервисов и БЗ своего домена; условия оплаты — согласно штатному расписанию.',
         ПРАВА: 'Запрашивать данные и доступы; эскалировать блокеры; требовать актуальности CMDB/БЗ в своей зоне. Ответственность: за нарушение регламентов и SLA, за действия вне выданных доступов.',
       };
       tables = {
-        ПРОЦЕССЫ: { headers: ['Узел', 'Работа', 'Вклад, ₽/год'],
+        ПРОЦЕССЫ: { headers: ['Узел', 'Работа', 'Обязанность'],
           rows: rw.map((w) => { const info = works.get(w)!;
-            return [info.num, info.name, Math.round(found.fotYear / rw.length).toLocaleString('ru-RU')]; }) },
+            return [info.num, info.name, 'исполнять по регламенту, соблюдать SLA']; }) },
         KPI: { headers: ['Узел', 'Показатель'],
           rows: rw.flatMap((w) => (works.get(w)?.note ? kpiOf(works.get(w)!.note).map((k) => [works.get(w)!.num, k]) : [])) },
       };
