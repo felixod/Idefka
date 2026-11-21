@@ -64,7 +64,7 @@ export function buildOrgChart(model: Model): Diagram {
     return { id: 'orgchart-main', notation: 'orgchart', status: 'working', boxes, arrows };
   }
 
-  const { placed, children } = layout(org);
+  const { placed } = layout(org);
   const depById = new Map(org.departments.map((d) => [d.id, d]));
 
   const existing = model.diagrams['orgchart-main'];
