@@ -21,6 +21,8 @@ jobs:
           cache: npm
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
+      - name: Model audit (mini test model)
+        run: python3 tools/test_model.py tools/testdata/mini.idef
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
