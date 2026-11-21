@@ -93,7 +93,12 @@ function checkOrgChart({ model, diagram, node, report }: Check) {
   const orgBoxes = diagram.boxes.filter((b) => b.kind === 'orgBox');
   const roles = diagram.boxes.filter((b) => b.kind === 'orgRole');
   const managesInto = new Map<string, number>();
-  for (const a of diagram.arrows) if (a.to.t === 'box' && a.link !== 'executes') managesInto.set(a.to.box, (managesInto.get(a.to.box) ?? 0) + 1);
+  const managesOutOf = new Map<string, number>();
+  for (const a of diagram.arrows) {
+    if (a.link === 'executes' || a.link === 'anchor') continue;
+    if (a.to.t === 'box') managesInto.set(a.to.box, (managesInto.get(a.to.box) ?? 0) + 1);
+    if (a.from.t === 'box') managesOutOf.set(a.from.box, (managesOutOf.get(a.from.box) ?? 0) + 1);
+  }
 
   const roots = orgBoxes.filter((b) => !managesInto.has(b.id));
   if (roots.length > 1) {
@@ -101,7 +106,7 @@ function checkOrgChart({ model, diagram, node, report }: Check) {
   }
   for (const b of roles) {
     const n = managesInto.get(b.id) ?? 0;
-    if (n !== 1) report('box', b.id, `${node}: у должности «${b.name.split('\n')[0]}» ${n === 0 ? 'нет вышестоящего' : `несколько вышестоящих (${n})`} — должна быть ровно одна линия подчинения`);
+    if (n + (managesOutOf.get(b.id) ?? 0) !== 1) report('box', b.id, `${node}: у должности «${b.name.split('\n')[0]}» должна быть ровно одна связь подчинения/принадлежности`);
   }
   for (const b of orgBoxes) {
     const name = b.name.split('\n')[0];
