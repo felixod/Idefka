@@ -265,7 +265,6 @@ export function orgCsv(org: OrgData, model: Model): string {
   for (const d of depFots(org)) {
     rows.push(['Отдел', d.dep.name, '', '', num(d.fte), '', '', num(d.fotMonth), num(d.fotYear), num(d.share * 100) + '%']);
   }
-  const s = orgSummary(org);
   rows.push(['Итого', '', '', '', num(s.totalFte), '', '', num(s.fotMonth), num(s.fotYear), '']);
   rows.push(['Юнит-экономика', 'Цена обращения L1', num(s.ticketPrice), 'Обращений на объект/год', num(s.siteTicketsYear), 'Стоимость объекта/год', num(s.costPerSiteYear), '', '', '']);
   const c = contractPrice(org);
