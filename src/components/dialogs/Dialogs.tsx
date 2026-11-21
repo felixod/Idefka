@@ -5,6 +5,7 @@ import { AuditDialog } from './AuditDialog';
 import { DecomposeDialog } from './DecomposeDialog';
 import { NewModelDialog } from './NewModelDialog';
 import { OrgWorkspace } from '../OrgWorkspace';
+import { OrgWizard } from '../OrgWizard';
 import { SettingsDialog } from './SettingsDialog';
 
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
@@ -136,6 +137,10 @@ export function Dialogs() {
 
   if (dialog.kind === 'org') {
     return <OrgWorkspace initialTab={dialog.tab} close={close} />;
+  }
+
+  if (dialog.kind === 'wizard') {
+    return <OrgWizard close={close} />;
   }
 
   return (

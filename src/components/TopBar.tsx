@@ -246,6 +246,7 @@ function OrgMenu({ idef0, close }: { idef0: boolean; close: () => void }) {
         {idef0 && item('Орг-конструктор: процессы → должности…', () => setState({ dialog: { kind: 'org', tab: 'proc' } }))}
         {idef0 && item('Структура и подразделения…', () => setState({ dialog: { kind: 'org', tab: 'struct' } }))}
         {idef0 && item('Диаграмма орг-структуры (сгенерировать)…', regenerateOrgChart)}
+        {idef0 && item('Мастер структуры…', () => setState({ dialog: { kind: 'wizard' } }))}
         <Separated>
           {item('Смета ФОТ (CSV для Excel)', exportOrgCsv)}
           {item('Положения и ДИ (Markdown)', exportOrgDocs)}
