@@ -359,7 +359,6 @@ export function orgDocsMd(org: OrgData, model: Model): string {
     lines.push(...(kpis.length ? kpis : ['- (заполнить владельцем процесса)']));
   }
 
-  const s = orgSummary(org);
   // Экономика и договор — не в оргдокументах: см. ABC-диалог и отчёт «Экономика.md».
   return lines.join('\n') + '\n';
 }
