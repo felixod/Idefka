@@ -98,16 +98,16 @@ function checkOrgChart({ model, diagram, node, report }: Check) {
   const roots = orgBoxes.filter((b) => !managesInto.has(b.id));
   if (roots.length > 1) {
     for (const b of roots.slice(1)) report('box', b.id, `${node}: у подразделения «${b.name.split('
-')[0]}» нет вышестоящего — на диаграмме должно быть одно корневое подразделение`);
+)[0]}» нет вышестоящего — на диаграмме должно быть одно корневое подразделение`);
   }
   for (const b of roles) {
     const n = managesInto.get(b.id) ?? 0;
     if (n !== 1) report('box', b.id, `${node}: у должности «${b.name.split('
-')[0]}» ${n === 0 ? 'нет вышестоящего' : `несколько вышестоящих (${n})`} — должна быть ровно одна линия подчинения`);
+)[0]}» ${n === 0 ? 'нет вышестоящего' : `несколько вышестоящих (${n})`} — должна быть ровно одна линия подчинения`);
   }
   for (const b of orgBoxes) {
     const name = b.name.split('
-')[0];
+)[0];
     if (model.org && b.id.startsWith('oc-') && !model.org.departments.some((d) => `oc-${d.id}` === b.id) && !b.id.startsWith('oc-r-')) {
       // блок-подразделение, которого больше нет в org (остался после удаления)
     }
@@ -126,7 +126,7 @@ function checkOrgChart({ model, diagram, node, report }: Check) {
       cur = next.get(cur);
       if (cur && seen.has(cur)) {
         report('box', b.id, `${node}: цикл подчинения через «${b.name.split('
-')[0]}»`);
+)[0]}»`);
         break;
       }
       if (cur) seen.add(cur);
