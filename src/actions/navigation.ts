@@ -1,3 +1,4 @@
+import { buildOrgChart } from '../model/orgchart';
 import { commit, getState, select, setState, toast } from '../store';
 import type { Notation } from '../model/types';
 import { decompose, deleteItems } from '../model/ops';
@@ -53,4 +54,15 @@ export function deleteSelection() {
   const warning = commit((model) => deleteItems(model, diagramId, sel.boxes, sel.arrows));
   select({});
   if (warning) toast(warning);
+}
+
+// Сгенерировать/обновить диаграмму орг-структуры из раздела org и открыть её.
+export function regenerateOrgChart() {
+  const id = 'orgchart-main';
+  commit((draft) => {
+    const chart = buildOrgChart(draft);
+    draft.diagrams[id] = chart;
+    draft.roots.orgchart = id;
+  });
+  openDiagram(id);
 }

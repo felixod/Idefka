@@ -3,6 +3,7 @@ import { getState, redo, setState, undo, useStore, type ThemePref } from '../sto
 import { diagramOrder, diagramPath, diagramTitle, nodeOf } from '../model/query';
 import { NOTATIONS, NOTATION_TABS } from '../model/notation';
 import type { Model, Notation } from '../model/types';
+import { regenerateOrgChart } from '../actions/navigation';
 import { exportOrgCsv, exportOrgDocs, exportPng, exportSvg, newFile, openDiagram, openFile, openRecentFile, printModel, save, switchNotation } from '../actions';
 import { canvasApi } from './canvas/Canvas';
 import { Icon, KindIcon } from './icons';
@@ -244,6 +245,7 @@ function OrgMenu({ idef0, close }: { idef0: boolean; close: () => void }) {
       <div className="menu" role="menu">
         {idef0 && item('Орг-конструктор: процессы → должности…', () => setState({ dialog: { kind: 'org', tab: 'proc' } }))}
         {idef0 && item('Структура и подразделения…', () => setState({ dialog: { kind: 'org', tab: 'struct' } }))}
+        {idef0 && item('Диаграмма орг-структуры (сгенерировать)…', regenerateOrgChart)}
         <Separated>
           {item('Смета ФОТ (CSV для Excel)', exportOrgCsv)}
           {item('Положения и ДИ (Markdown)', exportOrgDocs)}

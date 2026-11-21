@@ -7,8 +7,9 @@ export const VERSION = 5;
 
 export type Side = 'left' | 'top' | 'right' | 'bottom';
 
-export type Notation = 'idef0' | 'dfd' | 'idef3' | 'bpmn' | 'epc' | 'usecase' | 'class' | 'sequence' | 'activity' | 'deployment' | 'erd';
+export type Notation = 'idef0' | 'dfd' | 'idef3' | 'bpmn' | 'epc' | 'orgchart' | 'usecase' | 'class' | 'sequence' | 'activity' | 'deployment' | 'erd';
 
+type OrgChartKind = 'orgBox' | 'orgRole';
 type Idef0Kind = 'activity';
 type DfdKind = 'process' | 'external' | 'store';
 type Idef3Kind = 'uow' | 'junction' | 'referent';
@@ -25,6 +26,7 @@ export type NodeKind =
   | 'text'
   | 'umlNote'
   | Idef0Kind
+  | OrgChartKind
   | DfdKind
   | Idef3Kind
   | BpmnKind
@@ -99,6 +101,8 @@ export type LinkKind =
   | 'async'
   | 'reply'
   | 'flow'
+  | 'manages'
+  | 'executes'
   | 'identifying'
   | 'nonIdentifying';
 

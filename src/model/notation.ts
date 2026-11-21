@@ -36,6 +36,9 @@ export const KINDS: Record<NodeKind, KindInfo> = {
   store: define('store', 'Хранилище данных', 176, 40, 'Хранилище'),
 
   uow: define('uow', 'Единица работы', 152, 64, 'Новая работа', decomposable),
+
+  orgBox: define('orgBox', 'Подразделение', 200, 64, 'Подразделение', decomposable),
+  orgRole: define('orgRole', 'Должность', 176, 48, 'Должность'),
   junction: define('junction', 'Перекрёсток', 32, 72, '', { ...small, noName: true }),
   referent: define('referent', 'Объект ссылки', 128, 40, 'Объект ссылки'),
 
@@ -178,6 +181,16 @@ export const NOTATIONS: Record<Notation, NotationInfo> = {
     linkWord: 'Связь',
     hint: 'События и функции соединяются пунктирным потоком управления. Исполнитель, данные и система подключаются к функции сплошной линией — вид связи выбирается сам.',
   },
+  orgchart: {
+    id: 'orgchart',
+    title: 'Орг-структура — организационная диаграмма',
+    short: 'Орг',
+    tab: 'Орг-структура',
+    description: 'Подразделения и должности, подчинённость и исполнение работ IDEF0. Строится из раздела org автоматически и дорабатывается вручную.',
+    kinds: ['orgBox', 'orgRole', 'text'],
+    linkWord: 'Подчинение',
+    hint: 'Подразделения соединяются подчинением. Должность тоже можно соединить с руководителем. Сгенерировать структуру из org — меню «Организация».',
+  },
   usecase: {
     id: 'usecase',
     title: 'UML — диаграмма прецедентов',
@@ -250,6 +263,7 @@ export const NOTATION_TABS: NotationTab[] = [
   'idef3',
   'bpmn',
   'epc',
+  'orgchart',
   { group: 'uml', title: 'UML', items: ['usecase', 'class', 'sequence', 'activity', 'deployment'] },
   'erd',
 ];

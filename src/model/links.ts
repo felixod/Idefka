@@ -53,6 +53,11 @@ export const LINKS: Partial<Record<Notation, Choice<LinkKind>[]>> = {
     { value: 'identifying', label: 'Идентифицирующая' },
     { value: 'nonIdentifying', label: 'Неидентифицирующая' },
   ],
+  orgchart: [
+    { value: 'manages', label: 'Подчинение' },
+    { value: 'executes', label: 'Исполняет работу [A…]' },
+    { value: 'anchor', label: 'К примечанию' },
+  ],
 };
 
 function kindAt(diagram: Diagram, end: Endpoint): NodeKind | undefined {

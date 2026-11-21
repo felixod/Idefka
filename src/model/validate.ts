@@ -89,6 +89,47 @@ function checkIdef3({ model, diagram, report }: Check) {
   }
 }
 
+function checkOrgChart({ model, diagram, node, report }: Check) {
+  const orgBoxes = diagram.boxes.filter((b) => b.kind === 'orgBox');
+  const roles = diagram.boxes.filter((b) => b.kind === 'orgRole');
+  const managesInto = new Map<string, number>();
+  for (const a of diagram.arrows) if (a.to.t === 'box' && a.link !== 'executes') managesInto.set(a.to.box, (managesInto.get(a.to.box) ?? 0) + 1);
+
+  const roots = orgBoxes.filter((b) => !managesInto.has(b.id));
+  if (roots.length > 1) {
+    for (const b of roots.slice(1)) report('box', b.id, `${node}: у подразделения «${b.name.split('\n')[0]}» нет вышестоящего — на диаграмме должно быть одно корневое подразделение`);
+  }
+  for (const b of roles) {
+    const n = managesInto.get(b.id) ?? 0;
+    if (n !== 1) report('box', b.id, `${node}: у должности «${b.name.split('\n')[0]}» ${n === 0 ? 'нет вышестоящего' : `несколько вышестоящих (${n})`} — должна быть ровно одна линия подчинения`);
+  }
+  for (const b of orgBoxes) {
+    const name = b.name.split('\n')[0];
+    if (model.org && b.id.startsWith('oc-') && !model.org.departments.some((d) => `oc-${d.id}` === b.id) && !b.id.startsWith('oc-r-')) {
+      // блок-подразделение, которого больше нет в org (остался после удаления)
+    }
+    if (!name.trim()) report('box', b.id, `${node}: подразделение без названия`);
+  }
+  // циклы: проход по manages
+  const next = new Map<string, string>();
+  for (const a of diagram.arrows) {
+    if (a.link === 'executes' || a.from.t !== 'box' || a.to.t !== 'box') continue;
+    next.set(a.from.box, a.to.box);
+  }
+  for (const b of [...orgBoxes, ...roles]) {
+    const seen = new Set<string>([b.id]);
+    let cur: string | undefined = b.id;
+    while (cur && next.has(cur)) {
+      cur = next.get(cur);
+      if (cur && seen.has(cur)) {
+        report('box', b.id, `${node}: цикл подчинения через «${b.name.split('\n')[0]}»`);
+        break;
+      }
+      if (cur) seen.add(cur);
+    }
+  }
+}
+
 function checkBpmn({ diagram, node, report }: Check) {
   const isFlow = (a: Arrow) => (a.link ?? 'sequence') === 'sequence';
   const flowsIn = (b: Box) => into(diagram, b).filter(isFlow).length;
@@ -241,6 +282,7 @@ function checkDeployment(check: Check) {
 
 const CHECKS: Record<Notation, (check: Check) => void> = {
   idef0: checkIdef0,
+  orgchart: checkOrgChart,
   dfd: checkDfd,
   idef3: checkIdef3,
   bpmn: checkBpmn,
