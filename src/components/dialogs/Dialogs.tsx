@@ -140,7 +140,7 @@ export function Dialogs() {
 
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && close()}>
-      <div className={'modal' + (dialog.kind === 'abc' || dialog.kind === 'org' || dialog.kind === 'audit' ? ' wide' : '')} role="dialog" aria-modal>
+      <div className={'modal' + (dialog.kind === 'abc' || dialog.kind === 'audit' ? ' wide' : '')} role="dialog" aria-modal>
         <DialogBody dialog={dialog} close={close} modelName={fileName(filePath) ?? model.meta.name} />
       </div>
     </div>
