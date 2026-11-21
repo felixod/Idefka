@@ -281,9 +281,7 @@ export function orgDocsMd(org: OrgData, model: Model): string {
   const works = workIndex(model);
   const roles = roleFots(org);
   const byId = new Map(roles.map((r) => [r.role.id, r]));
-  const cost = workFot(org);
   const tree = depTree(org);
-  const contract = contractPrice(org);
   const lines: string[] = [
     `# Оргдокументы — ${model.meta.name}`,
     '',
@@ -345,8 +343,7 @@ export function orgDocsMd(org: OrgData, model: Model): string {
     lines.push(
       '---', '',
       `# ДИ — ${r.role.name}`, '',
-      `Отдел: ${r.dep.name}. Грейд: ${r.role.grade}. Непосредственный руководитель: ${boss}.`,
-      `Оклад: ${r.role.salaryMin.toLocaleString('ru-RU')} — ${r.role.salaryMax.toLocaleString('ru-RU')} ₽/мес.`,
+      `Отдел: ${r.dep.name}. Грейд: ${r.role.grade}. Непосредственный руководитель: ${boss}. Условия оплаты — согласно штатному расписанию.`,
       '',
       '## Цели должности', '',
       ...(r.dep.goals?.length ? r.dep.goals.map((g) => `- ${g}`) : ['- (из целей отдела)']),
@@ -360,30 +357,10 @@ export function orgDocsMd(org: OrgData, model: Model): string {
     lines.push('', '## KPI', '');
     const kpis = roleWorks.flatMap((w) => kpiOf(w.note).map((k) => `- ${w.num}: ${k}`));
     lines.push(...(kpis.length ? kpis : ['- (заполнить владельцем процесса)']));
-    lines.push('', '## Стоимость роли', '', `- ФОТ/год с взносами: **${formatRub(r.fotYear)}**`, '');
   }
 
   const s = orgSummary(org);
-  lines.push(
-    '---', '',
-    '# Прогноз стоимости и договор', '',
-    `- Штатных единиц всего: ${s.totalFte}; ФОТ/мес: ${formatRub(s.fotMonth)}; ФОТ/год с взносами: ${formatRub(s.fotYear)}`,
-    `- Себестоимость обслуживания (ФОТ service-отделов): ${formatRub(contract.serviceFotYear)}`,
-    `- Накладные (+${Math.round(org.params.overheadRate * 100)}%): ${formatRub(contract.overhead)}`,
-    `- Себестоимость с накладными: ${formatRub(contract.cost)}`,
-    `- Маржа (+${Math.round(org.params.marginRate * 100)}%): ${formatRub(contract.margin)}`,
-    `- **Цена договора: ${formatRub(contract.priceYear)}/год (${formatRub(contract.priceMonth)}/мес)**`,
-    `- В пересчёте: ${formatRub(contract.pricePerSiteMonth)}/объект/мес · ${formatRub(contract.pricePerUserMonth)}/пользователь/мес · ${formatRub(contract.pricePerTicket)}/обращение`,
-    `- Параметры: объектов ${org.params.sites} × ${org.params.usersPerSite} пользователей, ${org.params.ticketsPerMonth} обращений/мес`,
-    '',
-    '## Стоимость работ (распределение ФОТ)', '',
-    '| Работа | Название | ₽/год |', '|---|---|---|',
-  );
-  const wf = [...cost.entries()].sort((a, b) => b[1] - a[1]);
-  for (const [wid, value] of wf) {
-    const w = works.get(wid);
-    if (w) lines.push(`| ${w.num} | ${w.name} | ${Math.round(value).toLocaleString('ru-RU')} |`);
-  }
+  // Экономика и договор — не в оргдокументах: см. ABC-диалог и отчёт «Экономика.md».
   return lines.join('\n') + '\n';
 }
 
@@ -408,8 +385,8 @@ export const DEFAULT_TEMPLATES = {
 ## 5. Показатели эффективности
 {{ТАБЛИЦА:KPI}}
 
-## 6. Экономика отдела
-{{ЭКОНОМИКА}}
+## 6. Ресурсы и обеспечение
+{{РЕСУРСЫ}}
 
 ## 7. Права и взаимодействие
 {{ПРАВА}}`,
@@ -428,13 +405,13 @@ export const DEFAULT_TEMPLATES = {
 ## 4. Требования к знаниям
 {{ЗНАНИЯ}}
 
-## 5. Экономический вклад
-{{ЭКОНОМИКА}}
+## 5. Ресурсное обеспечение роли
+{{РЕСУРСЫ}}
 
 ## 6. Права и ответственность
 {{ПРАВА}}
 
-Оклад: {{ОКЛАД}} ₽/мес. Согласовано: руководитель отдела. Ознакомлен: сотрудник.`,
+Условия оплаты — согласно штатному расписанию. Согласовано: руководитель отдела. Ознакомлен: сотрудник.`,
 };
 
 /** Предложение по созданию должности для работы без ответственной роли. */
