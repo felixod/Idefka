@@ -225,8 +225,10 @@ export function OrgWizard({ close }: { close: () => void }) {
 
         {step === 3 && (
           <section className="f-card">
-            <span className="field-label">Предпросмотр: каркас ({newDeps.length ? `${newDeps.length} новых подразделений, ` : 'все подразделения уже есть, ')}
-              FTE плана ≈ {totalFte})</span>
+            <span className="field-label">
+              Предпросмотр: каркас ({newDeps.length ? `${newDeps.length} новых подразделений, ` : 'все подразделения уже есть, '}
+              FTE плана ≈ {totalFte})
+            </span>
             <table className="zebra table-wrap" style={{ maxHeight: '40vh' }}>
               <thead><tr><th>Подразделение</th><th>Тип</th><th>Роль</th><th className="num">FTE</th><th>Обоснование</th></tr></thead>
               <tbody>
