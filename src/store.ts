@@ -25,6 +25,7 @@ export type DialogState =
   | { kind: 'org'; tab: OrgTab }
   | { kind: 'audit' }
   | { kind: 'settings' }
+  | { kind: 'wizard' }
   | { kind: 'unsaved'; resolve: (answer: 'save' | 'discard' | 'cancel') => void }
   | { kind: 'about' }
   | { kind: 'shortcuts' };
