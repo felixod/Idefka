@@ -23,6 +23,7 @@ export type DialogState =
   | { kind: 'new' }
   | { kind: 'abc' }
   | { kind: 'org'; tab: OrgTab }
+  | { kind: 'audit' }
   | { kind: 'settings' }
   | { kind: 'unsaved'; resolve: (answer: 'save' | 'discard' | 'cancel') => void }
   | { kind: 'about' }

@@ -1,0 +1,166 @@
+{
+  "format": "cloneapp-model",
+  "version": 5,
+  "meta": {
+    "name": "Мини-модель для CI аудита",
+    "author": "model-audit",
+    "purpose": "Тестовая модель: все ERROR-правила CR-01..CR-25 проходят",
+    "viewpoint": "CI",
+    "created": "2026-11-21T00:00:00.000Z",
+    "modified": "2026-11-21T00:00:00.000Z"
+  },
+  "abc": { "currency": "₽", "timeUnit": "ч", "centers": [], "show": false },
+  "org": {
+    "departments": [
+      {
+        "id": "D1",
+        "name": "Служба ИТ",
+        "mission": "Обслуживать пользователей",
+        "kind": "service",
+        "goals": ["Закрывать обращения по SLA"],
+        "roles": [
+          {
+            "id": "r1",
+            "name": "Инженер",
+            "grade": "Middle",
+            "salaryMin": 80000,
+            "salaryMax": 120000,
+            "fte": 1,
+            "works": ["a1", "a2", "a3"],
+            "note": ""
+          }
+        ]
+      }
+    ],
+    "params": {
+      "months": 12,
+      "socialRate": 0.302,
+      "overheadRate": 0.25,
+      "marginRate": 0.15,
+      "ticketsPerMonth": 100,
+      "usersPerSite": 10,
+      "ticketsPerUserPerMonth": 0.5,
+      "sites": 2
+    },
+    "templates": {
+      "polozhenie": "# Положение об отделе «{{ОТДЕЛ}}»\n{{ЦЕЛИ}}",
+      "di": "# Должностная инструкция — {{ДОЛЖНОСТЬ}}\n{{ТАБЛИЦА:ПРОЦЕССЫ}}"
+    }
+  },
+  "roots": {
+    "idef0": "mctx",
+    "dfd": "mdfd",
+    "bpmn": "mbpmn",
+    "sequence": "mseq",
+    "class": "mcls",
+    "usecase": "muse"
+  },
+  "diagrams": {
+    "mctx": {
+      "id": "mctx",
+      "notation": "idef0",
+      "status": "working",
+      "boxes": [
+        { "id": "a0", "kind": "activity", "name": "Оказывать ИТ-услуги", "note": "", "x": 400, "y": 260, "w": 220, "h": 90, "child": "mdec" }
+      ],
+      "arrows": [
+        { "id": "ci1", "label": "Обращения", "note": "", "from": { "t": "border", "side": "left", "at": 200 }, "to": { "t": "box", "box": "a0", "side": "left" }, "tunnel": true },
+        { "id": "cc1", "label": "Регламент", "note": "", "from": { "t": "border", "side": "top", "at": 300 }, "to": { "t": "box", "box": "a0", "side": "top" }, "tunnel": true },
+        { "id": "co1", "label": "Выполненные услуги", "note": "", "from": { "t": "box", "box": "a0", "side": "right" }, "to": { "t": "border", "side": "right", "at": 200 }, "tunnel": true },
+        { "id": "cm1", "label": "Команда", "note": "", "from": { "t": "border", "side": "bottom", "at": 300 }, "to": { "t": "box", "box": "a0", "side": "bottom" }, "tunnel": true }
+      ]
+    },
+    "mdec": {
+      "id": "mdec",
+      "notation": "idef0",
+      "status": "working",
+      "parent": { "diagram": "mctx", "box": "a0" },
+      "boxes": [
+        { "id": "a1", "kind": "activity", "name": "Принять обращение", "note": "", "x": 80, "y": 240, "w": 200, "h": 90 },
+        { "id": "a2", "kind": "activity", "name": "Решить обращение", "note": "", "x": 420, "y": 240, "w": 200, "h": 90 },
+        { "id": "a3", "kind": "activity", "name": "Закрыть обращение", "note": "", "x": 760, "y": 240, "w": 200, "h": 90 }
+      ],
+      "arrows": [
+        { "id": "di1", "label": "Обращения", "note": "", "from": { "t": "border", "side": "left", "at": 140 }, "to": { "t": "box", "box": "a1", "side": "left" }, "tunnel": true },
+        { "id": "dc1", "label": "Регламент", "note": "", "from": { "t": "border", "side": "top", "at": 180 }, "to": { "t": "box", "box": "a1", "side": "top" }, "tunnel": true },
+        { "id": "dc2", "label": "Регламент", "note": "", "from": { "t": "border", "side": "top", "at": 500 }, "to": { "t": "box", "box": "a2", "side": "top" }, "tunnel": true },
+        { "id": "dc3", "label": "Регламент", "note": "", "from": { "t": "border", "side": "top", "at": 840 }, "to": { "t": "box", "box": "a3", "side": "top" }, "tunnel": true },
+        { "id": "do12", "label": "Решение", "note": "", "from": { "t": "box", "box": "a1", "side": "right" }, "to": { "t": "box", "box": "a2", "side": "left" } },
+        { "id": "do23", "label": "Выполнено", "note": "", "from": { "t": "box", "box": "a2", "side": "right" }, "to": { "t": "box", "box": "a3", "side": "left" } },
+        { "id": "do3", "label": "Ответ", "note": "", "from": { "t": "box", "box": "a3", "side": "right" }, "to": { "t": "border", "side": "right", "at": 140 }, "tunnel": true },
+        { "id": "dm12", "label": "Команда", "note": "", "from": { "t": "box", "box": "a2", "side": "bottom" }, "to": { "t": "box", "box": "a1", "side": "bottom" } },
+        { "id": "dm23", "label": "Команда", "note": "", "from": { "t": "box", "box": "a3", "side": "bottom" }, "to": { "t": "box", "box": "a2", "side": "bottom" } },
+        { "id": "dm31", "label": "Команда", "note": "", "from": { "t": "box", "box": "a1", "side": "bottom" }, "to": { "t": "box", "box": "a3", "side": "bottom" } }
+      ]
+    },
+    "mdfd": {
+      "id": "mdfd",
+      "notation": "dfd",
+      "status": "working",
+      "boxes": [
+        { "id": "e1", "kind": "external", "name": "Пользователь", "note": "", "x": 60, "y": 120, "w": 140, "h": 56 },
+        { "id": "p1", "kind": "process", "name": "Принять обращение [A1]", "note": "", "x": 300, "y": 100, "w": 180, "h": 88 },
+        { "id": "p2", "kind": "process", "name": "Решить обращение [A2]", "note": "", "x": 560, "y": 100, "w": 180, "h": 88 },
+        { "id": "p3", "kind": "process", "name": "Закрыть обращение [A3]", "note": "", "x": 820, "y": 100, "w": 180, "h": 88 }
+      ],
+      "arrows": [
+        { "id": "df1", "label": "Обращения", "note": "", "from": { "t": "box", "box": "e1", "side": "right" }, "to": { "t": "box", "box": "p1", "side": "left" } },
+        { "id": "df2", "label": "Решение", "note": "", "from": { "t": "box", "box": "p1", "side": "right" }, "to": { "t": "box", "box": "p2", "side": "left" } },
+        { "id": "df3", "label": "Выполнено", "note": "", "from": { "t": "box", "box": "p2", "side": "right" }, "to": { "t": "box", "box": "p3", "side": "left" } },
+        { "id": "df4", "label": "Ответ", "note": "", "from": { "t": "box", "box": "p3", "side": "right" }, "to": { "t": "box", "box": "e1", "side": "bottom" } }
+      ]
+    },
+    "mbpmn": {
+      "id": "mbpmn",
+      "notation": "bpmn",
+      "status": "working",
+      "boxes": [
+        { "id": "s0", "kind": "startEvent", "name": "Обращение получено", "note": "", "x": 60, "y": 160, "w": 36, "h": 36, "trigger": "message" },
+        { "id": "t1", "kind": "task", "name": "Принять [A1]", "note": "", "x": 160, "y": 140, "w": 140, "h": 76 },
+        { "id": "t2", "kind": "task", "name": "Решить [A2]", "note": "", "x": 380, "y": 140, "w": 140, "h": 76 },
+        { "id": "t3", "kind": "task", "name": "Закрыть [A3]", "note": "", "x": 600, "y": 140, "w": 140, "h": 76 },
+        { "id": "e0", "kind": "endEvent", "name": "Обращение закрыто", "note": "", "x": 820, "y": 160, "w": 36, "h": 36, "trigger": "none" }
+      ],
+      "arrows": [
+        { "id": "bf1", "label": "", "note": "", "from": { "t": "box", "box": "s0", "side": "right" }, "to": { "t": "box", "box": "t1", "side": "left" }, "link": "sequence" },
+        { "id": "bf2", "label": "", "note": "", "from": { "t": "box", "box": "t1", "side": "right" }, "to": { "t": "box", "box": "t2", "side": "left" }, "link": "sequence" },
+        { "id": "bf3", "label": "", "note": "", "from": { "t": "box", "box": "t2", "side": "right" }, "to": { "t": "box", "box": "t3", "side": "left" }, "link": "sequence" },
+        { "id": "bf4", "label": "", "note": "", "from": { "t": "box", "box": "t3", "side": "right" }, "to": { "t": "box", "box": "e0", "side": "left" }, "link": "sequence" }
+      ]
+    },
+    "mseq": {
+      "id": "mseq",
+      "notation": "sequence",
+      "status": "working",
+      "boxes": [
+        { "id": "l1", "kind": "lifeline", "name": "Система [A1]", "note": "", "x": 200, "y": 80, "w": 128, "h": 320 },
+        { "id": "l2", "kind": "lifeline", "name": "Служба [A2]", "note": "", "x": 560, "y": 80, "w": 128, "h": 320 }
+      ],
+      "arrows": [
+        { "id": "q1", "label": "Запрос [A2]", "note": "", "from": { "t": "box", "box": "l1", "side": "bottom" }, "to": { "t": "box", "box": "l2", "side": "bottom" }, "link": "sync", "seqY": 160 },
+        { "id": "q2", "label": "Ответ [A3]", "note": "", "from": { "t": "box", "box": "l2", "side": "bottom" }, "to": { "t": "box", "box": "l1", "side": "bottom" }, "link": "sync", "seqY": 220 }
+      ]
+    },
+    "mcls": {
+      "id": "mcls",
+      "notation": "class",
+      "status": "working",
+      "boxes": [
+        { "id": "cls1", "kind": "class", "name": "Служба ИТ", "note": "", "x": 300, "y": 200, "w": 180, "h": 100 }
+      ],
+      "arrows": []
+    },
+    "muse": {
+      "id": "muse",
+      "notation": "usecase",
+      "status": "working",
+      "boxes": [
+        { "id": "ua1", "kind": "actor", "name": "Пользователь", "note": "", "x": 100, "y": 200, "w": 40, "h": 72 },
+        { "id": "uc1", "kind": "useCase", "name": "Получить услугу [A1]", "note": "", "x": 320, "y": 200, "w": 180, "h": 64 }
+      ],
+      "arrows": [
+        { "id": "ua1c", "label": "", "note": "", "from": { "t": "box", "box": "ua1", "side": "right" }, "to": { "t": "box", "box": "uc1", "side": "left" }, "link": "association" }
+      ]
+    }
+  }
+}
