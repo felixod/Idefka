@@ -2,7 +2,7 @@
 // Заменяет модалку OrgDialog: редактирование подразделений и ролей, works-picker,
 // матрица покрытия с кликом на диаграммы, параметры экономики.
 import { useMemo, useState } from 'react';
-import { commit, setState, useStore } from '../store';
+import { commit, useStore } from '../store';
 import { openDiagram } from '../actions/navigation';
 import { select } from '../store';
 import {
@@ -60,7 +60,6 @@ export function OrgWorkspace({ close, initialTab }: { close: () => void; initial
   }
 
   const roles = roleFots(org);
-  const deps = depFots(org);
   const tree = depTree(org);
   const summary = orgSummary(org);
   const contract = contractPrice(org);
@@ -95,7 +94,7 @@ export function OrgWorkspace({ close, initialTab }: { close: () => void; initial
               style={{ paddingLeft: depth * 14 }}
               onClick={() => setSel({ kind: 'dep', id: dep.id })}
             >
-              <Icon.chevron className="org-tree-caret" />
+              <span className="org-tree-caret"><Icon.chevron /></span>
               <b>{dep.name}</b>
               <span className="muted org-tree-meta">{depRoles.reduce((s, r) => s + r.role.fte, 0)} ед.</span>
             </div>
