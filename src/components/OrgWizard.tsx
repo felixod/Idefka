@@ -3,7 +3,7 @@
 // гибридная департаментализация A1–A6 + филиалы, нормативы численности, 24/7).
 import { useMemo, useState } from 'react';
 import { commit, useStore } from '../store';
-import { createDepartment, depForWork, orgOf, upsertRole, workIndex, DEP_KIND_TITLE } from '../model/org';
+import { createDepartment, depForWork, orgOf, workIndex, DEP_KIND_TITLE } from '../model/org';
 import { Icon } from './icons';
 import type { OrgData, OrgDepartment, OrgRole } from '../model/types';
 
